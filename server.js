@@ -667,7 +667,87 @@ async function searchSamsClub(query) {
 /* Walmart México                                                      */
 /* ------------------------------------------------------------------ */
 
+async function fetchScrapingBeeWalmart(query) {
+  const url = "https://app.scrapingbee.com/api/v1/walmart/search?" +
+    new URLSearchParams({
+      query,
+      domain: "www.walmart.com.mx"
+    }).toString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "Authorization": `Bearer ${SCRAPINGBEE_API_KEY}`,
+        "Accept": "application/json"
+      }
+    });
+    if (!response.ok) throw new Error(`ScrapingBee HTTP ${response.status}`);
+    const data = await response.json();
+    if (!data || !Array.isArray(data.products)) {
+      throw new Error("ScrapingBee no devolvió productos de Walmart");
+    }
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function searchWalmart(query) {
+  if (SCRAPINGBEE_API_KEY) {
+    const data = await fetchScrapingBeeWalmart(query);
+    const results = [];
+    const seen = new Set();
+
+    for (const product of data.products) {
+      if (results.length >= MAX_RESULTS_PER_STORE) break;
+      if (!product) continue;
+
+      const id = String(product.product_id || product.id || "");
+      if (!id || seen.has(id)) continue;
+
+      const title = cleanText(product.title);
+      const price = Number(product.price) || parsePrice(product.price);
+      if (!title || !price) continue;
+
+      let oldPrice = Number(product.original_price || product.list_price || 0);
+      if (oldPrice <= price * 1.02 || oldPrice > price * 8) oldPrice = 0;
+
+      const link = absoluteUrl(
+        "https://www.walmart.com.mx",
+        product.url || product.canonical_url || ""
+      );
+      if (!link) continue;
+
+      results.push({
+        id: `walmart-${id}`,
+        storeId: "walmart",
+        store: STORES.walmart.name,
+        icon: STORES.walmart.icon,
+        color: STORES.walmart.color,
+        type: "tienda",
+        product: title,
+        category: cleanText(product.category) || "Walmart",
+        price,
+        old: oldPrice,
+        discount: discountPercent(oldPrice, price),
+        link,
+        image: product.image
+          ? absoluteUrl("https://www.walmart.com.mx", product.image)
+          : "",
+        source: "Walmart",
+        kind: "store",
+        live: true,
+        fetchedAt: Date.now()
+      });
+
+      seen.add(id);
+    }
+
+    return results;
+  }
+
   const target = STORES.walmart.searchUrl(query);
   const proxyUrl = scraperProxyUrl(target);
   const html = proxyUrl
