@@ -19,6 +19,7 @@
  */
 
 const http = require("node:http");
+const http2 = require("node:http2");
 const fs = require("node:fs/promises");
 const fsSync = require("node:fs");
 const path = require("node:path");
@@ -274,6 +275,97 @@ async function fetchPage(url) {
   }
 }
 
+async function fetchPageHttp2(url, redirects = 0) {
+  const target = new URL(url);
+  const client = http2.connect(target.origin);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let status = 0;
+    let headers = {};
+    let body = "";
+
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { client.close(); } catch (closeError) {}
+      if (error) reject(error);
+      else resolve(value);
+    };
+
+    const timer = setTimeout(
+      () => finish(new Error("Tiempo de espera agotado")),
+      18000
+    );
+
+    client.on("error", (error) => finish(error));
+    client.on("goaway", () => {
+      if (!settled) finish(new Error("Conexión HTTP/2 cerrada"));
+    });
+
+    const request = client.request({
+      ":method": "GET",
+      ":path": target.pathname + target.search,
+      ":authority": target.host,
+      ":scheme": "https",
+      "user-agent": USER_AGENT,
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "accept-language": "es-MX,es;q=0.9,en;q=0.7",
+      "accept-encoding": "identity",
+      "upgrade-insecure-requests": "1",
+      "cache-control": "no-cache",
+      "pragma": "no-cache",
+      "referer": target.origin + "/"
+    });
+
+    request.on("response", (responseHeaders) => {
+      status = Number(responseHeaders[":status"]) || 0;
+      headers = responseHeaders;
+    });
+
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 6 * 1024 * 1024) {
+        request.close(http2.constants.NGHTTP2_CANCEL);
+      }
+    });
+
+    request.on("error", (error) => finish(error));
+    request.on("end", () => {
+      if (status >= 300 && status < 400 && headers.location && redirects < 3) {
+        const next = new URL(String(headers.location), target).toString();
+        fetchPageHttp2(next, redirects + 1).then(
+          (value) => finish(null, value),
+          (error) => finish(error)
+        );
+        return;
+      }
+      if (!status) return finish(new Error("Sin respuesta HTTP/2"));
+      if (status < 200 || status >= 300) {
+        return finish(new Error(`HTTP ${status}`));
+      }
+      if (body.length < 5000) {
+        return finish(new Error("Respuesta vacía o bloqueada"));
+      }
+      if (/captcha|robot check|not a robot|introduce los caracteres|verify your identity/i.test(body.slice(0, 5000))) {
+        return finish(new Error("Bloqueo anti-bot"));
+      }
+      finish(null, body);
+    });
+
+    request.end();
+  });
+}
+
+async function politeFetchHttp2(storeId, url) {
+  const wait = Math.max(0, (nextStoreSlot.get(storeId) || 0) - Date.now());
+  if (wait > 0) await sleep(wait);
+  nextStoreSlot.set(storeId, Date.now() + 2500);
+  return fetchPageHttp2(url);
+}
+
 async function politeFetch(storeId, url) {
   const wait = Math.max(0, (nextStoreSlot.get(storeId) || 0) - Date.now());
   if (wait > 0) await sleep(wait);
@@ -455,7 +547,7 @@ async function searchLiverpool(query) {
 /* ------------------------------------------------------------------ */
 
 async function searchSamsClub(query) {
-  const html = await politeFetch("samsclub", STORES.samsclub.searchUrl(query));
+  const html = await politeFetchHttp2("samsclub", STORES.samsclub.searchUrl(query));
   const nextData = html.match(
     /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
   );
