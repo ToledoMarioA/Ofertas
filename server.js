@@ -101,6 +101,13 @@ const STORES = {
     searchUrl: (query) =>
       `https://www.sams.com.mx/search?q=${encodeURIComponent(query)}`
   },
+  walmart: {
+    name: "Walmart",
+    icon: "🏪",
+    color: "#0071ce",
+    searchUrl: (query) =>
+      `https://www.walmart.com.mx/search?q=${encodeURIComponent(query)}`
+  },
   costco: {
     name: "Costco",
     icon: "🏬",
@@ -548,7 +555,7 @@ async function searchLiverpool(query) {
 /* Sam's Club                                                          */
 /* ------------------------------------------------------------------ */
 
-function samsClubProxyUrl(target) {
+function scraperProxyUrl(target) {
   if (SCRAPER_API_KEY) {
     return "https://api.scraperapi.com/?" + new URLSearchParams({
       api_key: SCRAPER_API_KEY,
@@ -572,7 +579,7 @@ function samsClubProxyUrl(target) {
 
 async function searchSamsClub(query) {
   const target = STORES.samsclub.searchUrl(query);
-  const proxyUrl = samsClubProxyUrl(target);
+  const proxyUrl = scraperProxyUrl(target);
   const html = proxyUrl
     ? await politeFetch("samsclub", proxyUrl, 45000)
     : await politeFetchHttp2("samsclub", target);
@@ -644,6 +651,112 @@ async function searchSamsClub(query) {
         link,
         image: (item.imageInfo && item.imageInfo.thumbnailUrl) || "",
         source: "Sam's Club",
+        kind: "store",
+        live: true,
+        fetchedAt: Date.now()
+      });
+
+      seen.add(id);
+    }
+  }
+
+  return results;
+}
+
+/* ------------------------------------------------------------------ */
+/* Walmart México                                                      */
+/* ------------------------------------------------------------------ */
+
+async function searchWalmart(query) {
+  const target = STORES.walmart.searchUrl(query);
+  const proxyUrl = scraperProxyUrl(target);
+  const html = proxyUrl
+    ? await politeFetch("walmart", proxyUrl, 45000)
+    : await politeFetchHttp2("walmart", target);
+
+  const nextData = html.match(
+    /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
+  );
+  if (!nextData) throw new Error("No se encontró la información de productos");
+
+  let data;
+  try {
+    data = JSON.parse(nextData[1]);
+  } catch (error) {
+    throw new Error("Respuesta de Walmart no válida");
+  }
+
+  const normalize = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  const returnedQuery = normalize(data && data.query && data.query.q);
+  const requestedQuery = normalize(query);
+  if (
+    returnedQuery &&
+    !returnedQuery.includes(requestedQuery) &&
+    !requestedQuery.includes(returnedQuery)
+  ) {
+    throw new Error("Walmart devolvió resultados de otra búsqueda");
+  }
+
+  const stacks =
+    (data &&
+      data.props &&
+      data.props.pageProps &&
+      data.props.pageProps.initialData &&
+      data.props.pageProps.initialData.searchResult &&
+      data.props.pageProps.initialData.searchResult.itemStacks) || [];
+
+  const results = [];
+  const seen = new Set();
+
+  for (const stack of stacks) {
+    if (results.length >= MAX_RESULTS_PER_STORE) break;
+    const items = [].concat(stack.items || [], stack.itemsV2 || []);
+
+    for (const item of items) {
+      if (results.length >= MAX_RESULTS_PER_STORE) break;
+      if (!item || item.__typename !== "Product" || item.isOutOfStock) continue;
+
+      const id = String(item.usItemId || item.id || "");
+      if (!id || seen.has(id)) continue;
+
+      const title = cleanText(item.name);
+      const priceInfo = item.priceInfo || {};
+      const price = Number(item.price) || parsePrice(priceInfo.linePrice);
+      if (!title || !price) continue;
+
+      let oldPrice = parsePrice(priceInfo.wasPrice) || parsePrice(priceInfo.itemPrice);
+      if (oldPrice <= price * 1.02 || oldPrice > price * 8) oldPrice = 0;
+
+      const link = absoluteUrl(
+        "https://www.walmart.com.mx",
+        item.canonicalUrl || item.productUrl || ""
+      );
+      if (!link) continue;
+
+      const categoryPath = item.category && item.category.path;
+      const category = Array.isArray(categoryPath) && categoryPath.length
+        ? categoryPath[categoryPath.length - 1].name
+        : "Walmart";
+
+      results.push({
+        id: `walmart-${id}`,
+        storeId: "walmart",
+        store: STORES.walmart.name,
+        icon: STORES.walmart.icon,
+        color: STORES.walmart.color,
+        type: "tienda",
+        product: title,
+        category,
+        price,
+        old: oldPrice,
+        discount: discountPercent(oldPrice, price),
+        link,
+        image: (item.imageInfo && item.imageInfo.thumbnailUrl) || "",
+        source: "Walmart",
         kind: "store",
         live: true,
         fetchedAt: Date.now()
@@ -1686,6 +1799,7 @@ async function runSearch(query) {
     ["amazon", searchAmazon],
     ["liverpool", searchLiverpool],
     ["samsclub", searchSamsClub],
+    ["walmart", searchWalmart],
     ["costco", searchCostco],
     ["sears", searchSears],
     ["sanborns", searchSanborns],
@@ -2007,7 +2121,7 @@ server.listen(PORT, HOST, () => {
   console.log("");
   console.log("  Buscador de ofertas en vivo");
   console.log(`  → http://${HOST}:${PORT}`);
-  console.log("  Fuentes: Amazon + Liverpool + Sam's Club + Costco + Sears + Sanborns + Suburbia + Chedraui + La Comer + Home Depot + Soriana + Domino's + Starbucks + Mercado Libre (si está conectado)");
+  console.log("  Fuentes: Amazon + Liverpool + Sam's Club + Walmart + Costco + Sears + Sanborns + Suburbia + Chedraui + La Comer + Home Depot + Soriana + Domino's + Starbucks + Mercado Libre (si está conectado)");
   console.log(`  Mercado Libre: ${MELI_CLIENT_ID ? "configurado" : "sin configurar"} → http://${HOST}:${PORT}/auth/mercadolibre`);
   console.log("  Detén el servidor con Ctrl+C");
   console.log("");
