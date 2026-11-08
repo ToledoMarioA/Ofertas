@@ -50,7 +50,7 @@ function loadEnvFile(filePath) {
 loadEnvFile(path.join(__dirname, ".env"));
 
 const PORT = Number(process.env.PORT) || 8788;
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || "0.0.0.0";
 const ROOT = __dirname;
 const CACHE_TTL = 10 * 60 * 1000;
 const MAX_RESULTS_PER_STORE = 12;
@@ -72,6 +72,8 @@ const JINA_READER_URL = "https://r.jina.ai/";
 const COMER_SEARCH_URL = "https://lacomer.buscador.amarello.com.mx/searchArtPrior";
 const COMER_SUCC_ID = process.env.COMER_SUCC_ID || "363";
 const DOMINOS_STORE_ID = process.env.DOMINOS_STORE_ID || "11121";
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY || "";
+const SCRAPINGBEE_API_KEY = process.env.SCRAPINGBEE_API_KEY || "";
 let lastJinaRequest = 0;
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -243,9 +245,9 @@ function sleep(ms) {
 /* Descarga de páginas                                                 */
 /* ------------------------------------------------------------------ */
 
-async function fetchPage(url) {
+async function fetchPage(url, timeoutMs = 18000) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 18000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
       redirect: "follow",
@@ -366,11 +368,11 @@ async function politeFetchHttp2(storeId, url) {
   return fetchPageHttp2(url);
 }
 
-async function politeFetch(storeId, url) {
+async function politeFetch(storeId, url, timeoutMs = 18000) {
   const wait = Math.max(0, (nextStoreSlot.get(storeId) || 0) - Date.now());
   if (wait > 0) await sleep(wait);
   nextStoreSlot.set(storeId, Date.now() + 2500);
-  return fetchPage(url);
+  return fetchPage(url, timeoutMs);
 }
 
 async function politeFetchJson(storeId, url) {
@@ -546,8 +548,34 @@ async function searchLiverpool(query) {
 /* Sam's Club                                                          */
 /* ------------------------------------------------------------------ */
 
+function samsClubProxyUrl(target) {
+  if (SCRAPER_API_KEY) {
+    return "https://api.scraperapi.com/?" + new URLSearchParams({
+      api_key: SCRAPER_API_KEY,
+      url: target,
+      country_code: "mx",
+      premium: "true",
+      render: "true"
+    }).toString();
+  }
+  if (SCRAPINGBEE_API_KEY) {
+    return "https://app.scrapingbee.com/api/v1/?" + new URLSearchParams({
+      api_key: SCRAPINGBEE_API_KEY,
+      url: target,
+      country_code: "mx",
+      premium_proxy: "true",
+      render_js: "true"
+    }).toString();
+  }
+  return "";
+}
+
 async function searchSamsClub(query) {
-  const html = await politeFetchHttp2("samsclub", STORES.samsclub.searchUrl(query));
+  const target = STORES.samsclub.searchUrl(query);
+  const proxyUrl = samsClubProxyUrl(target);
+  const html = proxyUrl
+    ? await politeFetch("samsclub", proxyUrl, 45000)
+    : await politeFetchHttp2("samsclub", target);
   const nextData = html.match(
     /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
   );
