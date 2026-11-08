@@ -699,6 +699,12 @@ async function searchWalmart(query) {
     const data = await fetchScrapingBeeWalmart(query);
     const results = [];
     const seen = new Set();
+    const normalize = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const queryTokens = normalize(query).split(/\s+/).filter((token) => token.length >= 3);
 
     for (const product of data.products) {
       if (results.length >= MAX_RESULTS_PER_STORE) break;
@@ -710,6 +716,12 @@ async function searchWalmart(query) {
       const title = cleanText(product.title);
       const price = Number(product.price) || parsePrice(product.price);
       if (!title || !price) continue;
+
+      if (product.currency && product.currency !== "MXN") continue;
+      const haystack = normalize(title);
+      if (queryTokens.length && !queryTokens.some((token) => haystack.includes(token))) {
+        continue;
+      }
 
       let oldPrice = Number(product.original_price || product.list_price || 0);
       if (oldPrice <= price * 1.02 || oldPrice > price * 8) oldPrice = 0;
