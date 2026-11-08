@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#030503" />
+<title>Ofertazo · Buscador de ofertas de tiendas y restaurantes</title>
+<meta name="description" content="Busca y filtra ofertas de tus tiendas y restaurantes favoritos en un solo lugar." />
+<style>
+  :root{
+    --bg:#f7f4ef;
+    --surface:#ffffff;
+    --ink:#1c1917;
+    --ink-soft:#44403c;
+    --muted:#78716c;
+    --line:#e7e0d6;
+    --line-strong:#d6ccbd;
+    --accent:#ff4d2e;
+    --accent-2:#ff9a1f;
+    --accent-soft:#fff1ec;
+    --green:#0f8a4f;
+    --green-soft:#eafaf1;
+    --shadow-sm:0 1px 2px rgba(28,25,23,.05);
+    --shadow-md:0 12px 30px -18px rgba(28,25,23,.35);
+    --shadow-lg:0 30px 70px -30px rgba(28,25,23,.45);
+    --radius:20px;
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:16px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-10% -10% auto -10%;
+    height:70vh;
+    background:
+      radial-gradient(620px 320px at 12% 0%, rgba(255,77,46,.16), transparent 70%),
+      radial-gradient(720px 360px at 88% 6%, rgba(255,154,31,.20), transparent 70%),
+      radial-gradient(500px 300px at 50% 0%, rgba(167,139,250,.10), transparent 75%);
+    pointer-events:none;
+    z-index:0;
+  }
+  img,svg{display:block}
+  button{font:inherit;color:inherit;cursor:pointer}
+  [hidden]{display:none!important}
+  ::selection{background:#ffd9ce;color:var(--ink)}
+  :focus-visible{outline:3px solid rgba(255,77,46,.45);outline-offset:2px}
+
+  .shell{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:rgba(247,244,239,.82);
+    backdrop-filter:blur(14px) saturate(1.2);
+    -webkit-backdrop-filter:blur(14px) saturate(1.2);
+    border-bottom:1px solid rgba(231,224,214,.9);
+  }
+  .topbar-inner{
+    max-width:1180px;margin:0 auto;padding:13px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.03em;font-size:1.08rem}
+  .brand-mark{
+    width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(140deg,#ff4d2e 0%,#ff8a1f 60%,#ffc22e 100%);
+    box-shadow:0 8px 18px -8px rgba(255,77,46,.8), inset 0 1px 0 rgba(255,255,255,.4);
+    font-size:17px;
+  }
+  .brand small{
+    display:block;font-size:.66rem;font-weight:600;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--muted);margin-top:-2px;
+  }
+  .top-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:7px 8px 7px 13px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(255,255,255,.7);font-size:.8rem;font-weight:600;color:var(--ink-soft);
+    box-shadow:var(--shadow-sm);white-space:nowrap;
+  }
+  .live-dot{
+    width:8px;height:8px;border-radius:50%;background:#22c55e;
+    box-shadow:0 0 0 3px rgba(34,197,94,.18);
+    animation:pulse 2.4s ease-in-out infinite;
+    flex-shrink:0;
+  }
+  .top-pill.is-offline .live-dot{background:#a8a29e;box-shadow:none;animation:none}
+  .top-pill.is-loading .live-dot{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.18)}
+  .refresh-live{
+    width:24px;height:24px;border-radius:50%;border:0;background:transparent;
+    display:grid;place-items:center;font-size:.95rem;line-height:1;color:#a8a29e;
+    transition:background .15s ease,color .15s ease;flex-shrink:0;
+  }
+  .refresh-live:hover{background:#f2ede5;color:var(--ink)}
+  .refresh-live.is-loading{animation:spin .8s linear infinite;color:var(--accent)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+    50%{box-shadow:0 0 0 6px rgba(34,197,94,.06)}
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{max-width:1180px;margin:0 auto;padding:56px 24px 0;width:100%}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;
+    padding:6px 12px 6px 10px;border-radius:999px;
+    background:var(--accent-soft);border:1px solid #ffd7ca;
+    color:#b3300f;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .eyebrow .spark{font-size:.9rem}
+  h1{
+    margin:20px 0 0;max-width:820px;
+    font-size:clamp(2.15rem,4.6vw,3.65rem);
+    line-height:1.02;letter-spacing:-.045em;font-weight:850;
+  }
+  h1 .grad{
+    background:linear-gradient(100deg,#ff4d2e 0%,#ff7a1f 45%,#ffb020 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p.lede{
+    margin:18px 0 0;max-width:620px;color:var(--muted);
+    font-size:1.05rem;line-height:1.6;
+  }
+  .hero p.lede strong{color:var(--ink-soft);font-weight:650}
+
+  /* Search */
+  .search-zone{max-width:780px;margin-top:30px}
+  .search{
+    display:flex;align-items:center;gap:12px;
+    background:var(--surface);border:1.5px solid var(--line);
+    border-radius:18px;padding:9px 10px 9px 18px;
+    box-shadow:0 18px 40px -26px rgba(28,25,23,.45), var(--shadow-sm);
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  .search:focus-within{
+    border-color:#ffb4a2;
+    box-shadow:0 0 0 4px rgba(255,77,46,.10), 0 18px 40px -26px rgba(28,25,23,.45);
+  }
+  .search-icon{color:#a8a29e;flex-shrink:0}
+  .search input{
+    flex:1;min-width:0;border:0;background:transparent;outline:none;
+    font-size:1.05rem;font-weight:500;color:var(--ink);padding:10px 0;
+  }
+  .search input::placeholder{color:#a8a29e;font-weight:450}
+  .search input::-webkit-search-cancel-button,
+  .search input::-webkit-search-decoration{-webkit-appearance:none;appearance:none}
+  .search .kbd{
+    display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;
+    border:1px solid var(--line);border-bottom-width:2px;border-radius:7px;
+    font-size:.72rem;font-weight:700;color:var(--muted);background:#faf8f4;flex-shrink:0;
+  }
+  .clear-search{
+    width:36px;height:36px;border-radius:50%;border:0;background:#f2ede5;
+    display:grid;place-items:center;font-size:1.15rem;color:var(--muted);flex-shrink:0;
+    transition:background .15s ease,color .15s ease;
+  }
+  .clear-search:hover{background:#e8e0d4;color:var(--ink)}
+  .suggest-row{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-top:14px;font-size:.82rem;color:var(--muted);
+  }
+  .suggest-row .label{font-weight:600}
+  .suggest{
+    border:1px solid var(--line);background:rgba(255,255,255,.72);
+    border-radius:999px;padding:5px 12px;font-size:.8rem;font-weight:600;color:var(--ink-soft);
+    transition:all .15s ease;
+  }
+  .suggest:hover{border-color:#ffb4a2;background:var(--accent-soft);color:#b3300f;transform:translateY(-1px)}
+  .store-live{
+    display:inline-flex;align-items:center;gap:7px;margin-top:12px;
+    padding:6px 11px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(255,255,255,.78);font-size:.75rem;color:var(--muted);
+    box-shadow:var(--shadow-sm);max-width:100%;
+  }
+  .store-live[hidden]{display:none!important}
+  .store-live-dot{
+    width:7px;height:7px;border-radius:50%;background:#22c55e;
+    flex-shrink:0;box-shadow:0 0 0 2px rgba(34,197,94,.14);
+  }
+  .store-live.is-loading .store-live-dot{
+    background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.16);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .store-live.is-error .store-live-dot{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.14)}
+  .store-live-retry{
+    border:0;background:transparent;padding:0;color:#b3300f;
+    font-size:.74rem;font-weight:750;text-decoration:underline;cursor:pointer;
+  }
+
+  /* ---------- Filters ---------- */
+  .filters{max-width:1180px;width:100%;margin:34px auto 0;padding:0 24px}
+  .filter-card{
+    background:rgba(255,255,255,.9);
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:var(--shadow-sm);
+  }
+  .filter-head{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    padding-bottom:16px;border-bottom:1px dashed var(--line);margin-bottom:18px;
+  }
+  .filter-title{display:flex;align-items:center;gap:10px;font-weight:750;font-size:.95rem;letter-spacing:-.01em}
+  .filter-title .ico{
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:#f5efe6;border:1px solid var(--line);font-size:14px;
+  }
+  .filter-title small{display:block;font-size:.73rem;font-weight:500;color:var(--muted);letter-spacing:0}
+  .tabs{
+    display:inline-flex;gap:4px;padding:4px;border-radius:999px;
+    background:#f3eee6;border:1px solid #eee6da;
+  }
+  .tab{
+    border:0;background:transparent;border-radius:999px;
+    padding:8px 16px;font-size:.84rem;font-weight:650;color:var(--muted);
+    display:inline-flex;align-items:center;gap:7px;transition:all .16s ease;
+  }
+  .tab .n{
+    font-size:.7rem;font-weight:700;background:rgba(28,25,23,.07);
+    padding:1px 7px;border-radius:999px;color:inherit;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.is-active{background:#fff;color:var(--ink);box-shadow:0 2px 8px -2px rgba(28,25,23,.18)}
+  .tab.is-active .n{background:var(--ink);color:#fff}
+
+  .chip-groups{display:flex;flex-direction:column;gap:20px}
+  .group-label{
+    display:flex;align-items:center;gap:8px;
+    font-size:.71rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px;
+  }
+  .group-label .line{height:1px;flex:1;background:var(--line)}
+  .group-label .count{letter-spacing:0;font-size:.72rem;font-weight:700;color:#a8a29e}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    --dot:#a8a29e;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:7px 13px 7px 11px;border-radius:999px;
+    border:1px solid var(--line);background:#fff;
+    font-size:.86rem;font-weight:600;color:var(--ink-soft);
+    transition:transform .14s ease, border-color .14s ease, background .14s ease, color .14s ease, box-shadow .14s ease;
+    box-shadow:0 1px 1px rgba(28,25,23,.03);
+  }
+  .chip .dot{width:9px;height:9px;border-radius:50%;background:var(--dot);flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+  .chip .c{font-size:.73rem;font-weight:700;color:#a8a29e;transition:color .14s ease}
+  .chip .c.is-live{color:#16a34a}
+  .chip .c.is-demo{color:#9f7aea}
+  .chip:hover{border-color:#cfc5b6;transform:translateY(-1px);box-shadow:0 6px 14px -10px rgba(28,25,23,.5)}
+  .chip[aria-pressed="true"]{
+    background:var(--ink);border-color:var(--ink);color:#fff;
+    box-shadow:0 10px 20px -12px rgba(28,25,23,.65);
+  }
+  .chip[aria-pressed="true"] .dot{box-shadow:0 0 0 2px rgba(255,255,255,.22)}
+  .chip[aria-pressed="true"] .c{color:rgba(255,255,255,.62)}
+  .chip[aria-pressed="true"] .c.is-live{color:#4ade80}
+  .chip[aria-pressed="true"] .c.is-demo{color:#d8b4fe}
+  .filter-hint{
+    margin:18px 0 0;padding-top:14px;border-top:1px dashed var(--line);
+    font-size:.78rem;color:#a8a29e;display:flex;align-items:center;justify-content:space-between;
+    gap:10px;flex-wrap:wrap;
+  }
+  .legend{display:flex;align-items:center;gap:14px;margin-left:auto}
+  .legend-item{display:inline-flex;align-items:center;gap:5px;font-size:.73rem;color:#a8a29e;white-space:nowrap}
+  .lg{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .lg-live{background:#16a34a}
+  .lg-demo{background:#9f7aea}
+
+  /* ---------- Results ---------- */
+  .results{max-width:1180px;width:100%;margin:34px auto 0;padding:0 24px;flex:1}
+  .results-head{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .results-head h2{
+    margin:0;font-size:1.42rem;letter-spacing:-.03em;font-weight:800;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .results-sub{margin:5px 0 0;font-size:.85rem;color:var(--muted);max-width:640px}
+  .results-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sort-wrap{position:relative;display:flex;align-items:center}
+  .sort-wrap svg{position:absolute;right:12px;pointer-events:none;color:#a8a29e}
+  .sort-select{
+    appearance:none;-webkit-appearance:none;
+    background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:9px 36px 9px 15px;font-size:.82rem;font-weight:650;color:var(--ink-soft);
+    cursor:pointer;box-shadow:var(--shadow-sm);
+  }
+  .sort-select:hover{border-color:#cfc5b6}
+  .clear-filters{
+    border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:9px 15px;font-size:.82rem;font-weight:650;color:var(--muted);
+    display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);
+    transition:all .15s ease;
+  }
+  .clear-filters:hover{color:#b3300f;border-color:#ffc7b5;background:var(--accent-soft)}
+
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));
+    gap:18px;
+  }
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:17px;display:flex;flex-direction:column;gap:13px;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    box-shadow:0 1px 2px rgba(28,25,23,.03);
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    border-color:#ddd2c2;
+    box-shadow:var(--shadow-md);
+  }
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .store{display:flex;align-items:center;gap:10px;min-width:0}
+  .store-icon{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    font-size:20px;flex-shrink:0;border:1px solid rgba(28,25,23,.05);
+  }
+  .store-name{
+    margin:0;font-size:.84rem;font-weight:750;letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;
+  }
+  .store-type{margin:1px 0 0;font-size:.68rem;font-weight:600;color:#a8a29e;text-transform:uppercase;letter-spacing:.08em}
+  .badge-discount{
+    flex-shrink:0;background:var(--accent-soft);color:#c53a15;
+    border:1px solid #ffd7ca;border-radius:999px;
+    font-size:.76rem;font-weight:850;letter-spacing:-.01em;padding:4px 9px;
+  }
+  .badge-live{
+    flex-shrink:0;display:inline-flex;align-items:center;gap:5px;
+    background:#eafaf1;color:#0f8a4f;border:1px solid #c9f0d9;
+    border-radius:999px;font-size:.67rem;font-weight:850;letter-spacing:.06em;
+    padding:4px 9px;text-transform:uppercase;
+  }
+  .badge-live::before{
+    content:"";width:6px;height:6px;border-radius:50%;background:#22c55e;
+    box-shadow:0 0 0 2px rgba(34,197,94,.18);
+  }
+  .card h3{
+    margin:0;font-size:.99rem;line-height:1.38;font-weight:700;letter-spacing:-.015em;color:var(--ink);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    min-height:2.72em;
+  }
+  .tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tag-cat{font-size:.68rem;font-weight:700;letter-spacing:.03em;color:var(--muted);background:#f6f1e9;border-radius:6px;padding:3px 7px}
+  .tag-promo{font-size:.68rem;font-weight:800;letter-spacing:.03em;color:#a16207;background:#fef7e0;border:1px solid #fbe9b0;border-radius:6px;padding:3px 7px;text-transform:uppercase}
+  .price-line{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-top:auto}
+  .old{font-size:.82rem;color:#a8a29e;text-decoration:line-through;text-decoration-thickness:1.5px;font-weight:600}
+  .now{font-size:1.45rem;font-weight:850;letter-spacing:-.045em;color:var(--ink)}
+  .save-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:-6px}
+  .save{font-size:.72rem;font-weight:750;color:var(--green);background:var(--green-soft);border-radius:6px;padding:3px 7px}
+  .valid{font-size:.71rem;color:#a8a29e;font-weight:500;white-space:nowrap;margin-left:auto}
+  .tag-source{font-size:.68rem;font-weight:600;color:#a8a29e;letter-spacing:.01em;display:inline-flex;align-items:center;gap:4px}
+  .tag-source::before{content:"";width:5px;height:5px;border-radius:50%;background:#22c55e}
+  .card-foot{
+    display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #f3ede4;
+  }
+  .code{
+    flex:1;min-width:0;border:1px dashed #d6ccbd;background:#fbf8f3;
+    border-radius:9px;padding:7px 9px;font-size:.7rem;font-weight:600;color:var(--muted);
+    text-align:left;display:flex;align-items:center;gap:5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s ease;
+  }
+  .code strong{font-size:.72rem;font-weight:800;letter-spacing:.05em;color:var(--ink-soft)}
+  button.code:hover{border-color:#ffb4a2;background:var(--accent-soft);color:#b3300f}
+  button.code:hover strong{color:#b3300f}
+  .code-empty{cursor:default;background:transparent;border-color:transparent;padding-left:0;white-space:normal}
+  .btn-card{
+    flex-shrink:0;border:0;border-radius:9px;padding:8px 12px;
+    background:var(--ink);color:#fff;font-size:.76rem;font-weight:700;
+    display:inline-flex;align-items:center;gap:5px;transition:all .15s ease;
+    text-decoration:none;
+  }
+  .btn-card:hover{background:#000;transform:translateY(-1px);color:#fff}
+  .btn-card svg{transition:transform .15s ease}
+  .btn-card:hover svg{transform:translateX(2px)}
+
+  .empty{
+    grid-column:1/-1;text-align:center;padding:64px 24px;
+    background:rgba(255,255,255,.7);border:1px dashed var(--line-strong);border-radius:24px;
+  }
+  .empty .emoji{font-size:2.6rem;margin-bottom:10px}
+  .empty h3{margin:0 0 6px;font-size:1.15rem;letter-spacing:-.02em}
+  .empty p{margin:0 auto 18px;max-width:420px;color:var(--muted);font-size:.88rem}
+  .empty button{
+    border:0;background:var(--ink);color:#fff;border-radius:999px;
+    padding:10px 18px;font-size:.84rem;font-weight:700;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer{
+    max-width:1180px;width:100%;margin:52px auto 0;padding:22px 24px 34px;
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    color:#a8a29e;font-size:.76rem;
+  }
+  .footer .left{display:flex;align-items:center;gap:8px;font-weight:600;flex-wrap:wrap}
+  .footer-link{color:var(--muted);font-size:.76rem;font-weight:650;text-decoration:underline;text-underline-offset:2px}
+  .footer-link:hover{color:var(--ink)}
+  .footer-link.is-connected{text-decoration:none;color:var(--green)}
+  .footer .dot{width:5px;height:5px;border-radius:50%;background:#d6ccbd}
+
+  /* ---------- Modal ---------- */
+  .modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px}
+  .modal-overlay{position:absolute;inset:0;background:rgba(28,25,23,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:fade .2s ease}
+  .modal-card{
+    position:relative;z-index:1;width:min(480px,100%);max-height:92vh;overflow:auto;
+    background:#fff;border-radius:24px;padding:26px;
+    box-shadow:var(--shadow-lg);animation:pop .24s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  .modal-close{
+    position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+    border:0;background:#f4efe7;color:var(--muted);font-size:1.25rem;line-height:1;
+    display:grid;place-items:center;transition:all .15s ease;
+  }
+  .modal-close:hover{background:#eae2d6;color:var(--ink)}
+  .modal-store{display:flex;align-items:center;gap:11px;padding-right:40px}
+  .modal-store .store-icon{width:46px;height:46px;border-radius:13px;font-size:22px}
+  .modal-store p{margin:0;font-size:.92rem;font-weight:750}
+  .modal-store span{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a8a29e}
+  .modal-card h2{margin:20px 0 8px;font-size:1.32rem;line-height:1.25;letter-spacing:-.03em;font-weight:800}
+  .modal-desc{margin:0;color:var(--muted);font-size:.88rem;line-height:1.6}
+  .modal-prices{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:20px 0 6px;padding:16px;border-radius:14px;background:#fbf8f3;border:1px solid #f1eade;
+  }
+  .modal-prices .old{font-size:.85rem}
+  .modal-prices .now{font-size:1.9rem}
+  .modal-prices .badge-discount{margin-left:auto}
+  .modal-meta{display:flex;justify-content:space-between;gap:10px;font-size:.76rem;color:var(--muted);padding:0 4px 2px}
+  .modal-code{
+    margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1.5px dashed #d6ccbd;border-radius:13px;padding:12px 14px;background:#fffdf7;
+  }
+  .modal-code .lbl{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#a8a29e;margin:0 0 2px}
+  .modal-code strong{font-size:1rem;font-weight:850;letter-spacing:.12em}
+  .modal-code button{
+    border:0;background:var(--ink);color:#fff;border-radius:9px;padding:9px 13px;
+    font-size:.76rem;font-weight:700;flex-shrink:0;
+  }
+  .modal-note{
+    margin:16px 0 0;padding:11px 13px;border-radius:10px;background:#f8f5ef;
+    color:#a8a29e;font-size:.71rem;line-height:1.5;
+  }
+  .modal-actions{display:flex;gap:9px;margin-top:18px}
+  .btn-primary{
+    flex:1;border:0;border-radius:12px;padding:12px 16px;
+    background:linear-gradient(120deg,#ff4d2e,#ff8a1f);color:#fff;
+    font-size:.86rem;font-weight:800;box-shadow:0 12px 24px -12px rgba(255,77,46,.85);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 16px 28px -12px rgba(255,77,46,.9)}
+  .btn-ghost{
+    border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 16px;
+    font-size:.86rem;font-weight:700;color:var(--ink-soft);
+  }
+  .btn-ghost:hover{background:#faf7f2}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);
+    z-index:120;background:var(--ink);color:#fff;border-radius:999px;
+    padding:11px 18px;font-size:.82rem;font-weight:600;
+    display:flex;align-items:center;gap:9px;
+    box-shadow:0 18px 40px -16px rgba(0,0,0,.6);
+    opacity:0;pointer-events:none;transition:all .22s ease;max-width:calc(100vw - 32px);
+  }
+  .toast.is-visible{opacity:1;transform:translate(-50%,0)}
+  .toast .check{color:#4ade80;font-weight:900}
+
+  body.no-scroll{overflow:hidden}
+
+  @media (max-width:820px){
+    .topbar-inner,.hero,.filters,.results,.footer{padding-left:18px;padding-right:18px}
+    .hero{padding-top:38px}
+    .filter-card{padding:17px;border-radius:20px}
+    .filter-head{align-items:flex-start}
+    .results-head{align-items:flex-start}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px}
+    .footer{margin-top:40px}
+  }
+  @media (max-width:600px){
+    h1{font-size:2.05rem}
+    .hero p.lede{font-size:.95rem}
+    .search{padding-left:14px;border-radius:16px}
+    .search input{font-size:.96rem}
+    .search .kbd{display:none}
+    .suggest-row .label{display:none}
+    .tabs{width:100%}
+    .tab{flex:1;justify-content:center;padding:8px 6px;font-size:.78rem}
+    .filter-head{gap:12px}
+    .top-pill{padding:6px 10px;font-size:.72rem}
+    .brand small{display:none}
+    .results-head h2{font-size:1.22rem}
+    .results-tools{width:100%;justify-content:space-between}
+    .grid{grid-template-columns:1fr}
+    .modal-card{padding:22px;border-radius:20px}
+    .modal-prices .now{font-size:1.6rem}
+    .footer{flex-direction:column;align-items:flex-start;gap:6px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  }
+
+  /* ---------- Tema neón: fondo negro, texto verde neón ---------- */
+  :root{
+    --bg:#030503;
+    --surface:#070d08;
+    --ink:#a8ff3a;
+    --ink-soft:#8fdc62;
+    --muted:#6fae73;
+    --line:#1b3520;
+    --line-strong:#2b5434;
+    --accent:#b6ff2e;
+    --accent-2:#5dff8f;
+    --accent-soft:rgba(182,255,46,.10);
+    --green:#b6ff2e;
+    --green-soft:rgba(182,255,46,.10);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+    --shadow-md:0 12px 30px -18px rgba(0,0,0,.9);
+    --shadow-lg:0 30px 70px -30px rgba(0,0,0,.95);
+  }
+  html{color-scheme:dark;background:#030503}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+  }
+  body::before{
+    background:
+      radial-gradient(620px 320px at 12% 0%, rgba(57,255,20,.10), transparent 70%),
+      radial-gradient(720px 360px at 88% 6%, rgba(93,255,143,.07), transparent 70%),
+      radial-gradient(500px 300px at 50% 0%, rgba(182,255,46,.06), transparent 75%);
+  }
+  ::selection{background:var(--accent);color:#030503}
+  :focus-visible{outline-color:rgba(182,255,46,.62)}
+  h1{color:var(--ink);text-shadow:0 0 34px rgba(182,255,46,.12)}
+  h1 .grad{
+    background:linear-gradient(100deg,#d4ff8a 0%,#a8ff3a 42%,#39ff14 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand{color:var(--ink)}
+  .brand-mark{
+    background:linear-gradient(140deg,#d8ff7a 0%,#b6ff2e 55%,#39ff14 100%);
+    box-shadow:0 8px 22px -8px rgba(182,255,46,.65), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .brand small{color:var(--muted)}
+  .topbar{
+    background:rgba(3,5,3,.86);
+    border-bottom-color:rgba(43,84,52,.9);
+  }
+  .top-pill{
+    background:rgba(7,13,8,.92);
+    border-color:var(--line);
+    color:var(--ink-soft);
+  }
+  .live-dot{background:var(--accent);box-shadow:0 0 0 3px rgba(182,255,46,.18)}
+  .refresh-live{color:var(--muted)}
+  .refresh-live:hover{background:#0b140c;color:var(--accent)}
+  .eyebrow{
+    background:var(--accent-soft);
+    border-color:var(--line-strong);
+    color:var(--accent);
+  }
+  .hero p.lede{color:var(--muted)}
+  .hero p.lede strong{color:var(--ink-soft)}
+  .search{
+    background:#060b07;
+    border-color:#26482c;
+    box-shadow:0 18px 40px -26px rgba(0,0,0,.95), var(--shadow-sm);
+  }
+  .search:focus-within{
+    border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(182,255,46,.12), 0 18px 40px -26px rgba(0,0,0,.95);
+  }
+  .search-icon,.search input::placeholder{color:#5f8f63}
+  .search input{color:var(--ink)}
+  .search .kbd{background:#0b140c;border-color:var(--line-strong);color:var(--muted)}
+  .clear-search{background:#0b140c;color:var(--muted)}
+  .clear-search:hover{background:#122016;color:var(--accent)}
+  .suggest-row{color:var(--muted)}
+  .suggest{background:#070d08;border-color:var(--line);color:var(--ink-soft)}
+  .suggest:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .store-live{background:#070d08;border-color:var(--line);color:var(--muted)}
+  .store-live-retry{color:var(--accent)}
+  .filter-card{background:rgba(7,13,8,.94);border-color:var(--line)}
+  .filter-title .ico{background:#0b140c;border-color:var(--line)}
+  .filter-title small{color:var(--muted)}
+  .tabs{background:#0a120b;border-color:var(--line)}
+  .tab{color:var(--muted)}
+  .tab .n{background:rgba(182,255,46,.10);color:var(--ink-soft)}
+  .tab:hover{color:var(--ink)}
+  .tab.is-active{background:var(--accent);color:#030503;box-shadow:0 2px 12px -2px rgba(182,255,46,.35)}
+  .tab.is-active .n{background:#071007;color:var(--accent)}
+  .group-label{color:var(--muted)}
+  .group-label .line{background:var(--line)}
+  .group-label .count{color:#5f8f63}
+  .chip{
+    background:#070d08;
+    border-color:var(--line);
+    color:var(--ink-soft);
+    box-shadow:0 1px 1px rgba(0,0,0,.35);
+  }
+  .chip .dot{box-shadow:0 0 0 2px #030503}
+  .chip .c{color:#5f8f63}
+  .chip .c.is-live{
+    color:#030503;
+    background:#ffffff;
+    border-radius:999px;
+    padding:1px 6px;
+    margin-left:-2px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:18px;
+    line-height:1.55;
+    font-weight:800;
+  }
+  .chip .c.is-demo{color:#c084fc}
+  .chip:hover{border-color:var(--accent);box-shadow:0 6px 16px -10px rgba(182,255,46,.45)}
+  .chip[aria-pressed="true"]{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#030503;
+    box-shadow:0 0 0 1px rgba(182,255,46,.35), 0 8px 22px -12px rgba(182,255,46,.5);
+  }
+  .chip[aria-pressed="true"] .dot{box-shadow:0 0 0 2px rgba(3,5,3,.38)}
+  .chip[aria-pressed="true"] .c{color:rgba(3,5,3,.65)}
+  .chip[aria-pressed="true"] .c.is-live{color:#030503;background:#ffffff}
+  .chip[aria-pressed="true"] .c.is-demo{color:#4c1d95}
+  .filter-title,.results-head h2,.store-name,.modal-store p,.modal-card h2,.empty h3{color:var(--ink)}
+  .chip{color:var(--ink)}
+  .chip .c{color:#5f8f63}
+  .tag-source,.valid{color:#6fae73}
+  .group-label{color:#8fd96a}
+  .filter-hint{color:var(--muted)}
+  .legend-item{color:var(--muted)}
+  .lg-live{background:var(--accent)}
+  .lg-demo{background:#c084fc}
+  .sort-select,.clear-filters{background:#070d08;border-color:var(--line);color:var(--ink-soft)}
+  .sort-select option{background:#070d08;color:var(--ink)}
+  .sort-select:hover{border-color:var(--line-strong)}
+  .sort-wrap svg{color:var(--muted)}
+  .clear-filters:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .card{
+    background:#070d08;
+    border-color:var(--line);
+    box-shadow:0 1px 2px rgba(0,0,0,.45);
+  }
+  .card:hover{
+    border-color:#3b6b3f;
+    box-shadow:0 12px 30px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(182,255,46,.10);
+  }
+  .store-icon{border-color:rgba(182,255,46,.18)}
+  .store-type{color:#5f8f63}
+  .badge-discount{
+    background:rgba(182,255,46,.12);
+    border-color:#3b6b3f;
+    color:var(--accent);
+  }
+  .badge-live{
+    background:#ffffff;
+    border-color:#ffffff;
+    color:#030503;
+    box-shadow:0 0 14px rgba(255,255,255,.14);
+  }
+  .badge-live::before{background:#39ff14;box-shadow:0 0 0 2px rgba(3,5,3,.16)}
+  .card h3,.now{color:var(--ink)}
+  .tag-cat{background:#0b140c;color:var(--muted)}
+  .tag-promo{background:rgba(182,255,46,.10);border-color:#2b5434;color:var(--accent)}
+  .old{color:#5f8f63}
+  .save{background:var(--green-soft);color:var(--accent)}
+  .valid,.tag-source{color:var(--muted)}
+  .tag-source::before{background:var(--accent)}
+  .card-foot{border-top-color:var(--line)}
+  .code{background:#0b140c;border-color:var(--line-strong);color:var(--muted)}
+  .code strong{color:var(--ink-soft)}
+  button.code:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  button.code:hover strong{color:var(--accent)}
+  .btn-card{
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    box-shadow:none;
+  }
+  .btn-card:hover{background:var(--accent);color:#030503;box-shadow:0 0 18px rgba(182,255,46,.35)}
+  .empty{background:#070d08;border-color:var(--line-strong)}
+  .empty button{background:var(--accent);color:#030503}
+  .footer{border-top-color:var(--line);color:var(--muted)}
+  .footer-link{color:var(--ink-soft)}
+  .footer-link:hover{color:var(--accent)}
+  .footer-link.is-connected{color:var(--accent)}
+  .footer .dot{background:var(--line-strong)}
+  .modal-overlay{background:rgba(0,0,0,.82)}
+  .modal-card{background:#070d08;border:1px solid var(--line)}
+  .modal-close{background:#0b140c;color:var(--muted)}
+  .modal-close:hover{background:#122016;color:var(--accent)}
+  .modal-store span{color:var(--muted)}
+  .modal-desc{color:var(--muted)}
+  .modal-prices{background:#0b140c;border-color:var(--line)}
+  .modal-code{background:#0b140c;border-color:var(--line-strong)}
+  .modal-code .lbl{color:var(--muted)}
+  .modal-code strong{color:var(--ink)}
+  .modal-code button{background:var(--accent);color:#030503}
+  .modal-note{background:#0b140c;color:var(--muted)}
+  .btn-primary{
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    color:#030503;
+    box-shadow:0 12px 24px -12px rgba(182,255,46,.6);
+  }
+  .btn-primary:hover{box-shadow:0 16px 28px -12px rgba(182,255,46,.7)}
+  .btn-ghost{background:#0b140c;border-color:var(--line);color:var(--ink-soft)}
+  .btn-ghost:hover{background:#122016;color:var(--accent)}
+  .toast{background:var(--accent);color:#030503;box-shadow:0 18px 40px -16px rgba(182,255,46,.35)}
+  .toast .check{color:#030503}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-track{background:#030503}
+  ::-webkit-scrollbar-thumb{background:#1b3520;border-radius:999px;border:3px solid #030503}
+  ::-webkit-scrollbar-thumb:hover{background:#2b5434}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🏷️</span>
+        <span>Ofertazo<small>Buscador de ofertas</small></span>
+      </div>
+      <div class="top-pill" id="livePill" title="Ofertas en vivo de Amazon, Liverpool, Sam's Club, Costco, Sears, Sanborns, Suburbia, Chedraui, La Comer, Home Depot, Soriana, Domino's Pizza, Starbucks, Mercado Libre y Promodescuentos">
+        <span class="live-dot" id="liveDot" aria-hidden="true"></span>
+        <span id="topCount">95 ofertas activas</span>
+        <button class="refresh-live" id="refreshLive" type="button" aria-label="Actualizar ofertas en vivo" title="Actualizar ofertas en vivo">↻</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <span class="eyebrow"><span class="spark" aria-hidden="true">✨</span> Buen Fin 2026 · Ofertas y cupones</span>
+      <h1>Todas las ofertas.<br /><span class="grad">Un solo buscador.</span></h1>
+      <p class="lede">
+        Filtra por tus <strong>tiendas y restaurantes</strong> favoritos y escribe el artículo que buscas.
+        Compara precios, descuentos y cupones en segundos.
+      </p>
+
+      <div class="search-zone">
+        <div class="search" role="search">
+          <svg class="search-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-3.6-3.6"></path>
+          </svg>
+          <label for="q" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Buscar ofertas</label>
+          <input id="q" type="search" autocomplete="off" spellcheck="false"
+                 placeholder='Busca "audífonos", "pizza", "Nike"...' aria-describedby="searchHelp" />
+          <kbd class="kbd" title="Presiona / para buscar">/</kbd>
+          <button class="clear-search" id="clearSearch" type="button" aria-label="Borrar búsqueda" hidden>×</button>
+        </div>
+        <div class="suggest-row" id="searchHelp">
+          <span class="label">Prueba:</span>
+          <button class="suggest" type="button" data-q="audífonos">audífonos</button>
+          <button class="suggest" type="button" data-q="pizza">pizza</button>
+          <button class="suggest" type="button" data-q="tenis">tenis</button>
+          <button class="suggest" type="button" data-q="café">café</button>
+          <button class="suggest" type="button" data-q="alitas">alitas</button>
+          <button class="suggest" type="button" data-q="smartwatch">smartwatch</button>
+        </div>
+        <div class="store-live" id="storeLive" role="status" aria-live="polite" hidden>
+          <span class="store-live-dot" aria-hidden="true"></span>
+          <span id="storeLiveText"></span>
+          <button class="store-live-retry" id="storeLiveRetry" type="button" hidden>Reintentar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="filters" aria-labelledby="filtersTitle">
+      <div class="filter-card">
+        <div class="filter-head">
+          <div class="filter-title" id="filtersTitle">
+            <span class="ico" aria-hidden="true">🎛️</span>
+            <span>Filtrar por comercio<small>Elige una o varias tiendas y restaurantes</small></span>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Tipo de comercio">
+            <button class="tab is-active" type="button" role="tab" aria-selected="true" data-type="todo">Todo <span class="n" id="countTodo">95</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-type="tienda">Tiendas <span class="n" id="countTienda">51</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-type="restaurante">Restaurantes <span class="n" id="countRest">44</span></button>
+          </div>
+        </div>
+
+        <div class="chip-groups">
+          <div class="chip-group" id="groupTienda">
+            <p class="group-label"><span>Tiendas</span><span class="line"></span><span class="count" id="labelTienda">25</span></p>
+            <div class="chips" id="chipsTienda"></div>
+          </div>
+          <div class="chip-group" id="groupRest">
+            <p class="group-label"><span>Restaurantes</span><span class="line"></span><span class="count" id="labelRest">22</span></p>
+            <div class="chips" id="chipsRest"></div>
+          </div>
+        </div>
+
+        <p class="filter-hint">
+          <span>💡 Toca un botón para activarlo; toca de nuevo para quitarlo.</span>
+          <span class="legend" aria-label="Verde: ofertas con datos reales; morado: ofertas de ejemplo">
+            <span class="legend-item"><i class="lg lg-live" aria-hidden="true"></i> Datos reales</span>
+            <span class="legend-item"><i class="lg lg-demo" aria-hidden="true"></i> Ejemplo</span>
+          </span>
+        </p>
+      </div>
+    </section>
+
+    <section class="results" aria-labelledby="resultsTitle" id="resultados">
+      <div class="results-head">
+        <div>
+          <h2 id="resultsTitle">95 ofertas</h2>
+          <p class="results-sub" id="resultsSub">En todas las tiendas y restaurantes</p>
+        </div>
+        <div class="results-tools">
+          <div class="sort-wrap">
+            <label for="sort" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Ordenar ofertas</label>
+            <select class="sort-select" id="sort">
+              <option value="relevancia">Relevancia</option>
+              <option value="descuento">Mayor descuento</option>
+              <option value="precio-asc">Menor precio</option>
+              <option value="precio-desc">Mayor precio</option>
+              <option value="ahorro">Mayor ahorro</option>
+            </select>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+          <button class="clear-filters" id="clearFilters" type="button" hidden>Limpiar filtros</button>
+        </div>
+      </div>
+
+      <div class="grid" id="grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="left"><span class="dot"></span><span>Ofertazo · Buscador de ofertas</span><a class="footer-link" id="meliConnect" href="/auth/mercadolibre">Conectar Mercado Libre</a></span>
+    <span>Ofertas en vivo: Amazon, Liverpool, Sam's Club, Costco, Sears, Sanborns, Suburbia, Chedraui, La Comer, Home Depot, Soriana, Domino's Pizza, Mercado Libre y Promodescuentos · Domino's Pizza y Starbucks en vivo; los demás restaurantes y el catálogo base son datos de ejemplo. Precios en MXN.</span>
+  </footer>
+</div>
+
+<!-- Modal de detalle -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-overlay" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" type="button" data-close aria-label="Cerrar ventana">×</button>
+    <div class="modal-store">
+      <span class="store-icon" id="modalIcon">🏷️</span>
+      <div>
+        <p id="modalStore">Tienda</p>
+        <span id="modalType">Tienda</span>
+      </div>
+    </div>
+    <h2 id="modalTitle">Producto</h2>
+    <p class="modal-desc" id="modalDesc"></p>
+    <div class="modal-prices">
+      <span class="old" id="modalOld"></span>
+      <span class="now" id="modalNow"></span>
+      <span class="badge-discount" id="modalDiscount"></span>
+    </div>
+    <div class="modal-meta">
+      <span id="modalValid"></span>
+      <span id="modalSave"></span>
+    </div>
+    <div class="modal-code" id="modalCodeBox">
+      <div>
+        <p class="lbl">Cupón</p>
+        <strong id="modalCode">—</strong>
+      </div>
+      <button type="button" id="modalCopy">Copiar</button>
+    </div>
+    <p class="modal-note">Oferta de demostración. Los precios, cupones y vigencias son ficticios y no representan promociones reales.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" type="button" id="modalPrimary">Copiar cupón</button>
+      <button class="btn-ghost" type="button" data-close>Seguir buscando</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="check">✓</span><span id="toastMsg">Listo</span></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     DATOS (precios de ejemplo, en MXN)
+     [producto, categoría, precio, precio anterior, vigencia, cupón, promo]
+     ========================================================= */
+  const STORES = [
+    { id: "amazon", name: "Amazon", type: "tienda", icon: "📦", color: "#ff9900", offers: [
+      ["Echo Dot (5.ª gen) + bombilla inteligente", "Tecnología", 699, 1249, "30 nov", "ECHO25", "Envío gratis"],
+      ["Kindle Paperwhite 16 GB", "Tecnología", 2199, 2999, "15 dic", "", ""],
+      ["Fire TV Stick 4K", "Tecnología", 649, 1099, "30 nov", "", ""]
+    ]},
+    { id: "mercadolibre", name: "Mercado Libre", type: "tienda", icon: "🤝", color: "#ffe600", offers: [
+      ["Xiaomi Redmi Note 14 128 GB", "Celulares", 3499, 4999, "12 dic", "MLNUEVO", "Envío gratis"],
+      ["Audífonos JBL Tune 520BT", "Audio", 699, 1299, "20 nov", "", ""]
+    ]},
+    { id: "liverpool", name: "Liverpool", type: "tienda", icon: "🛍️", color: "#e10098", offers: [
+      ["Perfume Carolina Herrera 212 VIP 100 ml", "Belleza", 1890, 2650, "30 nov", "VIP20", ""],
+      ["Set de sábanas King 400 hilos", "Hogar", 899, 1599, "24 nov", "", ""]
+    ]},
+    { id: "walmart", name: "Walmart", type: "tienda", icon: "🏪", color: "#0071ce", offers: [
+      ["Pantalla Hisense 55\" 4K", "Pantallas", 6490, 9999, "30 nov", "", "Meses sin intereses"],
+      ["Agua purificada 24 pack", "Despensa", 89, 139, "18 nov", "", ""]
+    ]},
+    { id: "soriana", name: "Soriana", type: "tienda", icon: "🛒", color: "#e4032e", offers: [
+      ["Pavo entero 5 kg", "Despensa", 399, 549, "20 nov", "", ""],
+      ["Caja de vinos 6 botellas", "Vinos", 599, 899, "30 nov", "VINO15", ""]
+    ]},
+    { id: "costco", name: "Costco", type: "tienda", icon: "🏬", color: "#e31837", offers: [
+      ["Samsung 65\" 4K", "Pantallas", 12999, 18999, "30 nov", "", "Envío gratis"],
+      ["Papel higiénico 36 rollos", "Hogar", 329, 459, "15 dic", "", ""]
+    ]},
+    { id: "samsclub", name: "Sam's Club", type: "tienda", icon: "🏪", color: "#0067b1", offers: [
+      ["iPad 10.ª gen 64 GB", "Tecnología", 6999, 9499, "30 nov", "", ""],
+      ["Cerveza 24 pack", "Despensa", 329, 429, "22 nov", "", ""]
+    ]},
+    { id: "coppel", name: "Coppel", type: "tienda", icon: "🏠", color: "#ffd100", offers: [
+      ["Sala 3 piezas", "Muebles", 4999, 7999, "30 nov", "", "Meses sin intereses"],
+      ["Licuadora Oster 600 W", "Cocina", 899, 1299, "20 nov", "", ""]
+    ]},
+    { id: "elektra", name: "Elektra", type: "tienda", icon: "⚡", color: "#e30613", offers: [
+      ["Laptop Lenovo IdeaPad 3", "Cómputo", 7499, 9999, "30 nov", "", ""],
+      ["Motocicleta Italika 150 cc", "Motos", 24999, 29999, "15 dic", "", "Enganche $2,999"]
+    ]},
+    { id: "homedepot", name: "Home Depot", type: "tienda", icon: "🔨", color: "#f96302", offers: [
+      ["Taladro DeWalt 20 V", "Herramientas", 2499, 3499, "30 nov", "", ""],
+      ["Árbol de Navidad 1.8 m", "Hogar", 1199, 1899, "24 dic", "", ""]
+    ]},
+    { id: "bestbuy", name: "Best Buy", type: "tienda", icon: "💻", color: "#003b64", offers: [
+      ["MacBook Air M3 13\"", "Cómputo", 18999, 22999, "30 nov", "", "12 MSI"],
+      ["PlayStation 5 Slim", "Videojuegos", 7499, 8999, "30 nov", "", ""]
+    ]},
+    { id: "nike", name: "Nike", type: "tienda", icon: "✔️", color: "#111111", offers: [
+      ["Tenis Air Max 90", "Deportes", 1799, 2599, "30 nov", "RUN15", ""],
+      ["Sudadera Dri-FIT", "Ropa", 749, 1199, "20 nov", "", ""]
+    ]},
+    { id: "adidas", name: "Adidas", type: "tienda", icon: "👟", color: "#111111", offers: [
+      ["Tenis Ultraboost 5", "Deportes", 2199, 3299, "30 nov", "", ""],
+      ["Chamarra puffer", "Ropa", 1399, 2199, "15 dic", "", ""]
+    ]},
+    { id: "zara", name: "Zara", type: "tienda", icon: "👗", color: "#111111", offers: [
+      ["Abrigo de lana", "Moda", 1299, 1999, "30 nov", "", ""],
+      ["Jeans wide leg", "Moda", 599, 899, "30 nov", "", ""]
+    ]},
+    { id: "shein", name: "Shein", type: "tienda", icon: "👚", color: "#111111", offers: [
+      ["Vestido satinado midi", "Moda", 329, 599, "15 dic", "", ""],
+      ["Set de 3 blusas", "Moda", 449, 799, "15 dic", "", ""]
+    ]},
+    { id: "temu", name: "Temu", type: "tienda", icon: "🎁", color: "#fb7701", offers: [
+      ["Organizador de cocina", "Hogar", 129, 299, "30 nov", "", ""],
+      ["Audífonos TWS", "Audio", 199, 499, "30 nov", "", ""]
+    ]},
+    { id: "aliexpress", name: "AliExpress", type: "tienda", icon: "🚀", color: "#ff4747", offers: [
+      ["Smartwatch AMOLED", "Tecnología", 549, 1299, "12 dic", "", ""],
+      ["Mini proyector 4K", "Tecnología", 1899, 3499, "12 dic", "", ""]
+    ]},
+    { id: "officedepot", name: "Office Depot", type: "tienda", icon: "📎", color: "#e31e24", offers: [
+      ["Silla ergonómica de malla", "Oficina", 2499, 3999, "30 nov", "", ""],
+      ["Impresora Epson EcoTank", "Oficina", 3299, 4499, "30 nov", "", ""]
+    ]},
+    { id: "sears", name: "Sears", type: "tienda", icon: "🏬", color: "#004b8d", offers: [
+      ["Colchón matrimonial", "Hogar", 3999, 6499, "30 nov", "", ""],
+      ["Freidora de aire 5 L", "Cocina", 999, 1699, "24 nov", "", ""]
+    ]},
+    { id: "suburbia", name: "Suburbia", type: "tienda", icon: "👕", color: "#f7a800", offers: [
+      ["Tenis Puma", "Moda", 899, 1399, "30 nov", "", ""],
+      ["Chamarra de mezclilla", "Moda", 499, 799, "30 nov", "", ""]
+    ]},
+    { id: "fahorro", name: "Farmacias del Ahorro", type: "tienda", icon: "💊", color: "#00a651", offers: [
+      ["Vitamina C 1000 mg, 90 cápsulas", "Salud", 129, 219, "30 nov", "", ""],
+      ["Protector solar SPF 50", "Salud", 189, 289, "30 nov", "", ""]
+    ]},
+    { id: "fguadalajara", name: "Farmacias Guadalajara", type: "tienda", icon: "💊", color: "#e30613", offers: [
+      ["Gel antibacterial 1 L", "Salud", 79, 119, "30 nov", "", ""],
+      ["Pañales talla 4, 40 piezas", "Bebé", 189, 259, "30 nov", "", ""]
+    ]},
+    { id: "lacomer", name: "La Comer", type: "tienda", icon: "🥑", color: "#8cc63f", offers: [
+      ["Salmón fresco 1 kg", "Alimentos", 399, 549, "14 nov", "", ""],
+      ["Café de especialidad 500 g", "Alimentos", 189, 299, "30 nov", "", ""]
+    ]},
+    { id: "chedraui", name: "Chedraui", type: "tienda", icon: "🛍️", color: "#e30613", offers: [
+      ["Aguacate hass 1 kg", "Alimentos", 49, 79, "14 nov", "", ""],
+      ["Huevos 30 piezas", "Alimentos", 89, 119, "20 nov", "", ""]
+    ]},
+    { id: "aurrera", name: "Bodega Aurrerá", type: "tienda", icon: "🏪", color: "#ffcc00", offers: [
+      ["Detergente 5 L", "Hogar", 99, 159, "30 nov", "", ""],
+      ["Refresco 12 pack", "Despensa", 109, 159, "20 nov", "", ""]
+    ]},
+
+    { id: "mcdonalds", name: "McDonald's", type: "restaurante", icon: "🍔", color: "#ffc72c", offers: [
+      ["Combo Big Mac", "Comida rápida", 129, 179, "30 nov", "", "Solo app"],
+      ["2 McTrío Jr", "Comida rápida", 99, 149, "30 nov", "MCTRIO", ""]
+    ]},
+    { id: "burgerking", name: "Burger King", type: "restaurante", icon: "🍔", color: "#d62300", offers: [
+      ["Whopper doble + papas", "Comida rápida", 139, 189, "30 nov", "", ""],
+      ["2x1 Whopper", "Comida rápida", 169, 338, "30 nov", "2X1BK", "Solo app"]
+    ]},
+    { id: "kfc", name: "KFC", type: "restaurante", icon: "🍗", color: "#e4002b", offers: [
+      ["Bucket 8 piezas", "Pollo", 199, 289, "30 nov", "", ""],
+      ["Combo 3 piezas + refresco", "Pollo", 119, 169, "30 nov", "", ""]
+    ]},
+    { id: "dominos", name: "Domino's Pizza", type: "restaurante", icon: "🍕", color: "#006491", offers: [
+      ["Pizza grande 3 ingredientes", "Pizza", 149, 249, "30 nov", "DOMINOS40", ""],
+      ["2 pizzas medianas", "Pizza", 199, 358, "30 nov", "", ""]
+    ]},
+    { id: "littlecaesars", name: "Little Caesars", type: "restaurante", icon: "🍕", color: "#f47b20", offers: [
+      ["Pizza Hot-N-Ready", "Pizza", 99, 139, "30 nov", "", ""],
+      ["2 pizzas + pan de ajo", "Pizza", 189, 269, "30 nov", "", ""]
+    ]},
+    { id: "pizzahut", name: "Pizza Hut", type: "restaurante", icon: "🍕", color: "#d62300", offers: [
+      ["Pizza mediana pan + alitas", "Pizza", 229, 349, "30 nov", "", ""],
+      ["Combo familiar", "Pizza", 399, 549, "30 nov", "", ""]
+    ]},
+    { id: "starbucks", name: "Starbucks", type: "restaurante", icon: "☕", color: "#00704a", offers: [
+      ["Frappuccino grande 2x1", "Café", 89, 178, "30 nov", "2X1STAR", "Después de 14 h"],
+      ["Café + pan dulce", "Café", 79, 115, "30 nov", "", ""]
+    ]},
+    { id: "subway", name: "Subway", type: "restaurante", icon: "🥪", color: "#008c15", offers: [
+      ["Sub de 30 cm", "Sándwiches", 99, 139, "30 nov", "", ""],
+      ["2 subs + refresco", "Sándwiches", 169, 238, "30 nov", "", ""]
+    ]},
+    { id: "carlsjr", name: "Carl's Jr.", type: "restaurante", icon: "🍔", color: "#c8102e", offers: [
+      ["Combo Famous Star", "Comida rápida", 129, 179, "30 nov", "", ""],
+      ["2x1 hamburguesas clásicas", "Comida rápida", 159, 258, "30 nov", "", ""]
+    ]},
+    { id: "wingstop", name: "Wingstop", type: "restaurante", icon: "🍗", color: "#006b3f", offers: [
+      ["10 alitas + papas", "Alitas", 199, 289, "30 nov", "", ""],
+      ["Boneless 15 piezas", "Alitas", 229, 329, "30 nov", "", ""]
+    ]},
+    { id: "chilis", name: "Chili's", type: "restaurante", icon: "🌶️", color: "#b01f24", offers: [
+      ["Costilla BBQ + 2 guarniciones", "Casual", 299, 429, "30 nov", "", ""],
+      ["2x1 margaritas", "Bebidas", 149, 298, "30 nov", "", ""]
+    ]},
+    { id: "vips", name: "Vips", type: "restaurante", icon: "🍽️", color: "#e30613", offers: [
+      ["Desayuno Vips", "Casual", 119, 169, "30 nov", "", ""],
+      ["Comida + postre", "Casual", 189, 259, "30 nov", "", ""]
+    ]},
+    { id: "sanborns", name: "Sanborns", type: "tienda", icon: "🏬", color: "#7a1f3d", offers: [
+      ["Enchiladas suizas", "Casual", 159, 219, "30 nov", "", ""],
+      ["Café + pastel", "Café", 99, 149, "30 nov", "", ""]
+    ]},
+    { id: "toks", name: "Toks", type: "restaurante", icon: "🍳", color: "#f36f21", offers: [
+      ["Combo desayuno", "Casual", 109, 159, "30 nov", "", ""],
+      ["Pechuga a la plancha", "Casual", 169, 229, "30 nov", "", ""]
+    ]},
+    { id: "casadenoto", name: "La Casa de Toño", type: "restaurante", icon: "🫓", color: "#b02a30", offers: [
+      ["Pozole + tostadas", "Casual", 139, 189, "30 nov", "", ""],
+      ["3 flautas + agua fresca", "Casual", 119, 169, "30 nov", "", ""]
+    ]},
+    { id: "califa", name: "El Califa de León", type: "restaurante", icon: "🌮", color: "#c8102e", offers: [
+      ["3 tacos de bistec", "Tacos", 135, 180, "30 nov", "", ""],
+      ["Taco + refresco", "Tacos", 75, 100, "30 nov", "", ""]
+    ]},
+    { id: "pollofeliz", name: "Pollo Feliz", type: "restaurante", icon: "🍗", color: "#f9a11b", offers: [
+      ["Pollo entero + guarniciones", "Pollo", 249, 329, "30 nov", "", ""],
+      ["Combo 8 piezas", "Pollo", 299, 399, "30 nov", "", ""]
+    ]},
+    { id: "nutrisa", name: "Nutrisa", type: "restaurante", icon: "🍦", color: "#6c2d91", offers: [
+      ["Yogurt griego 1 L", "Postres", 99, 139, "30 nov", "", ""],
+      ["2x1 nieve", "Postres", 75, 150, "30 nov", "", ""]
+    ]},
+    { id: "krispykreme", name: "Krispy Kreme", type: "restaurante", icon: "🍩", color: "#009b3a", offers: [
+      ["Docena original", "Postres", 199, 289, "30 nov", "", ""],
+      ["2 donas + café", "Postres", 79, 119, "30 nov", "", ""]
+    ]},
+    { id: "cinnabon", name: "Cinnabon", type: "restaurante", icon: "🥮", color: "#005a8c", offers: [
+      ["2 rollos clásicos", "Postres", 129, 189, "30 nov", "", ""],
+      ["Combo rollo + café", "Postres", 99, 139, "30 nov", "", ""]
+    ]},
+    { id: "ihop", name: "IHOP", type: "restaurante", icon: "🥞", color: "#1b4f9c", offers: [
+      ["Pancakes ilimitados", "Desayuno", 149, 219, "30 nov", "", ""],
+      ["Combo desayuno familiar", "Desayuno", 299, 429, "30 nov", "", ""]
+    ]},
+    { id: "dairyqueen", name: "Dairy Queen", type: "restaurante", icon: "🍦", color: "#d71920", offers: [
+      ["Blizzard mediano 2x1", "Postres", 99, 198, "30 nov", "", ""],
+      ["Combo burger + postre", "Comida rápida", 129, 179, "30 nov", "", ""]
+    ]}
+  ];
+
+  /* ---------- Utilidades ---------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+
+  const norm = (value) => String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  const moneyWhole = new Intl.NumberFormat("es-MX", {
+    style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0
+  });
+  const moneyCents = new Intl.NumberFormat("es-MX", {
+    style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+  const money = (value) => {
+    const number = Number(value);
+    return Number.isInteger(number) ? moneyWhole.format(number) : moneyCents.format(number);
+  };
+
+  const TYPE_LABEL = { tienda: "Tienda", restaurante: "Restaurante" };
+
+  /* ---------- Catálogo plano ---------- */
+  const ALL = [];
+  STORES.forEach((store) => {
+    store.offers.forEach((offer, index) => {
+      const [product, category, price, old, until, code, promo] = offer;
+      ALL.push({
+        id: store.id + "-" + index,
+        storeId: store.id,
+        store: store.name,
+        icon: store.icon,
+        color: store.color,
+        type: store.type,
+        product: product,
+        category: category,
+        price: price,
+        old: old,
+        until: until,
+        code: code || "",
+        promo: promo || "",
+        discount: Math.max(1, Math.round((1 - price / old) * 100)),
+        haystack: norm([product, category, store.name, code || "", promo || ""].join(" "))
+      });
+    });
+  });
+
+  const BASE_ALL = ALL.slice();
+
+  /* ---------- Ofertas en vivo (Promodescuentos) ---------- */
+  // Puente público RSS → JSON con CORS. Sin API key tiene límite de peticiones.
+  // Para producción conviene usar un backend propio o una API key del puente.
+  const LIVE_FEED_URL = "https://www.promodescuentos.com/rss/todas";
+  const LIVE_API_URL = "https://api.rss2json.com/v1/api.json?rss_url=" +
+    encodeURIComponent(LIVE_FEED_URL) + "&count=30";
+  const LIVE_CACHE_KEY = "ofertazo:live:v1";
+  const LIVE_TTL = 15 * 60 * 1000;
+
+  const EXTRA_STORE_META = {
+    "ToysRus": { icon: "🧸", color: "#e4002b" },
+    "Steam": { icon: "🎮", color: "#1b2838" },
+    "Samsung Store": { icon: "📱", color: "#1428a0" },
+    "Sony Store": { icon: "🎧", color: "#000000" },
+    "Otras tiendas": { icon: "🔥", color: "#ff4d2e" }
+  };
+  const FALLBACK_STORE_META = [
+    { icon: "🏷️", color: "#ff4d2e" }, { icon: "🛍️", color: "#e10098" },
+    { icon: "🛒", color: "#0071ce" }, { icon: "🏪", color: "#e4032e" },
+    { icon: "📦", color: "#f59e0b" }, { icon: "🎁", color: "#7c3aed" }
+  ];
+  const LIVE_STORE_NAMES = Array.from(new Set(
+    STORES.map((s) => s.name).concat(Object.keys(EXTRA_STORE_META))
+  )).sort((a, b) => b.length - a.length);
+
+  function hashString(value) {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+    return Math.abs(hash);
+  }
+
+  function slugify(value) {
+    return norm(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tienda";
+  }
+
+  function metaForStore(name) {
+    const clean = String(name || "Otras tiendas").trim();
+    const known = STORES.find((s) => norm(s.name) === norm(clean));
+    if (known) {
+      return { id: known.id, name: known.name, type: known.type, icon: known.icon, color: known.color };
+    }
+    const extra = EXTRA_STORE_META[clean];
+    if (extra) {
+      return { id: "live-" + slugify(clean), name: clean, type: "tienda", icon: extra.icon, color: extra.color };
+    }
+    const fallback = FALLBACK_STORE_META[hashString(norm(clean)) % FALLBACK_STORE_META.length];
+    return { id: "live-" + slugify(clean), name: clean, type: "tienda", icon: fallback.icon, color: fallback.color };
+  }
+
+  function storeEntries() {
+    const map = new Map();
+    STORES.forEach((s) => map.set(s.id, {
+      id: s.id, name: s.name, type: s.type, icon: s.icon, color: s.color, count: 0, liveCount: 0
+    }));
+    ALL.forEach((offer) => {
+      let entry = map.get(offer.storeId);
+      if (!entry) {
+        entry = {
+          id: offer.storeId, name: offer.store, type: offer.type,
+          icon: offer.icon, color: offer.color, count: 0, liveCount: 0
+        };
+        map.set(offer.storeId, entry);
+      }
+      entry.count++;
+      if (offer.live) entry.liveCount++;
+    });
+    return Array.from(map.values()).filter((entry) => entry.count > 0);
+  }
+
+  function updateCounts() {
+    const entries = storeEntries();
+    $("#countTodo").textContent = ALL.length;
+    $("#countTienda").textContent = ALL.filter((o) => o.type === "tienda").length;
+    $("#countRest").textContent = ALL.filter((o) => o.type === "restaurante").length;
+    $("#labelTienda").textContent = entries.filter((e) => e.type === "tienda").length;
+    $("#labelRest").textContent = entries.filter((e) => e.type === "restaurante").length;
+  }
+
+  /* ---------- Lectura del feed ---------- */
+  function decodeEntities(value) {
+    const area = document.createElement("textarea");
+    area.innerHTML = String(value || "");
+    return area.value;
+  }
+
+  function plainText(html) {
+    return decodeEntities(String(html || "").replace(/<[^>]*>/g, " "))
+      .replace(/\s+/g, " ").trim();
+  }
+
+  function parsePrice(text) {
+    const match = String(text || "").match(/\$\s*([\d]{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/);
+    if (!match) return 0;
+    const value = Number(match[1].replace(/,/g, ""));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function parseOldPrice(text, price) {
+    const patterns = [
+      /(?:antes|precio\s+(?:de\s+)?lista|lista|regular|ven[ií]a\s+en|anterior(?:mente)?)\s*:?\s*(?:de\s*)?\$\s*([\d,]+(?:\.\d{1,2})?)/i,
+      /\$\s*([\d,]+(?:\.\d{1,2})?)\s*(?:antes|de\s+lista|regular)/i
+    ];
+    for (const pattern of patterns) {
+      const match = String(text || "").match(pattern);
+      if (!match) continue;
+      const value = Number(match[1].replace(/,/g, ""));
+      if (value > price * 1.03 && value < price * 8) return value;
+    }
+    return 0;
+  }
+
+  function parseCoupon(text) {
+    const match = String(text || "").match(/(?:cup[oó]n(?:es)?|c[oó]digo)\s*:?\s*([A-Z][A-Z0-9][A-Z0-9_-]{2,})/);
+    return match ? match[1] : "";
+  }
+
+  function timeAgo(timestamp) {
+    const diff = Math.max(0, Date.now() - timestamp);
+    if (diff < 60 * 1000) return "hace un momento";
+    if (diff < 60 * 60 * 1000) return "hace " + Math.round(diff / 60000) + " min";
+    if (diff < 24 * 60 * 60 * 1000) return "hace " + Math.round(diff / 3600000) + " h";
+    return "hace " + Math.round(diff / 86400000) + " d";
+  }
+
+  function parsePubDate(value) {
+    let text = String(value || "").trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text)) {
+      text = text.replace(" ", "T") + "Z";
+    }
+    const timestamp = Date.parse(text);
+    return Number.isFinite(timestamp) ? timestamp : Date.now();
+  }
+
+  function safeDealLink(value) {
+    try {
+      const url = new URL(value);
+      if (url.protocol === "https:" &&
+          (url.hostname === "promodescuentos.com" || url.hostname.endsWith(".promodescuentos.com"))) {
+        return url.href;
+      }
+    } catch (error) { /* enlace inválido */ }
+    return "";
+  }
+
+  function detectLiveStore(title) {
+    const text = norm(title);
+    let best = "";
+    for (const name of LIVE_STORE_NAMES) {
+      const normalized = norm(name);
+      if (!normalized) continue;
+      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp("(^|[^a-z0-9])" + escaped + "([^a-z0-9]|$)");
+      if (pattern.test(text) && name.length > best.length) best = name;
+    }
+    if (best) return best;
+    const colon = title.indexOf(":");
+    if (colon > 1 && colon <= 32) {
+      const prefix = title.slice(0, colon).trim();
+      if (prefix) return prefix;
+    }
+    return "Otras tiendas";
+  }
+
+  function productFromTitle(title, storeName) {
+    let product = String(title || "").trim();
+    const normalizedStore = norm(storeName);
+    if (normalizedStore && norm(product).startsWith(normalizedStore)) {
+      product = product.slice(storeName.length);
+    }
+    product = product.replace(/^[\s:\-–—|]+/, "").trim();
+    return product || String(title || "").trim();
+  }
+
+  function liveOfferFromItem(item, index) {
+    const title = decodeEntities(item.title || "").replace(/\s+/g, " ").trim();
+    const description = plainText(item.description || item.content || "");
+    const price = parsePrice(description) || parsePrice(title);
+    const link = safeDealLink(item.link || item.guid || "");
+    if (!title || !price || !link) return null;
+
+    const storeName = detectLiveStore(title);
+    const meta = metaForStore(storeName);
+    const old = parseOldPrice(description, price);
+    const discount = old ? Math.max(1, Math.round((1 - price / old) * 100)) : 0;
+    const publishedAt = parsePubDate(item.pubDate);
+    const coupon = parseCoupon(description);
+    const category = (Array.isArray(item.categories) && item.categories[0]) || "Ofertas";
+
+    return {
+      id: "live-" + index + "-" + hashString(link),
+      live: true,
+      source: "Promodescuentos",
+      link: link,
+      storeId: meta.id,
+      store: meta.name,
+      icon: meta.icon,
+      color: meta.color,
+      type: "tienda",
+      product: productFromTitle(title, storeName),
+      category: category,
+      price: price,
+      old: old || price,
+      discount: discount,
+      until: timeAgo(publishedAt),
+      publishedAt: publishedAt,
+      code: coupon,
+      promo: "",
+      haystack: norm([title, description.slice(0, 300), category, meta.name, coupon, "promodescuentos en vivo"].join(" "))
+    };
+  }
+
+  /* ---------- Estado ---------- */
+  const state = {
+    q: "",
+    type: "todo",
+    stores: new Set(),
+    sort: "relevancia",
+    promoOffers: [],
+    storeOffers: [],
+    storeQuery: ""
+  };
+
+  /* ---------- Referencias DOM ---------- */
+  const searchInput = $("#q");
+  const clearSearchBtn = $("#clearSearch");
+  const clearFiltersBtn = $("#clearFilters");
+  const grid = $("#grid");
+  const resultsTitle = $("#resultsTitle");
+  const resultsSub = $("#resultsSub");
+  const topCount = $("#topCount");
+  const tabs = $$(".tab");
+  const sortSelect = $("#sort");
+  const chipsTienda = $("#chipsTienda");
+  const chipsRest = $("#chipsRest");
+  const groupTienda = $("#groupTienda");
+  const groupRest = $("#groupRest");
+  const storeLive = $("#storeLive");
+  const storeLiveText = $("#storeLiveText");
+  const storeLiveRetry = $("#storeLiveRetry");
+
+  /* ---------- Estado de la conexión ---------- */
+  const livePill = $("#livePill");
+  const refreshLiveBtn = $("#refreshLive");
+  let liveLoading = false;
+  let lastLiveUpdate = 0;
+  let lastManualRefresh = 0;
+
+  function setLiveStatus(mode, text) {
+    livePill.classList.toggle("is-offline", mode === "offline");
+    livePill.classList.toggle("is-loading", mode === "loading");
+    topCount.textContent = text;
+  }
+
+  function readLiveCache() {
+    try {
+      const raw = localStorage.getItem(LIVE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) return null;
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeLiveCache(items) {
+    try {
+      localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ ts: Date.now(), items: items }));
+    } catch (error) { /* almacenamiento no disponible */ }
+  }
+
+  function refreshLivePill() {
+    const liveCount = ALL.filter((offer) => offer.live).length;
+    if (!liveCount) return;
+    setLiveStatus("live", ALL.length + " ofertas · " + liveCount + " en vivo");
+    const parts = [];
+    if (state.promoOffers.length) parts.push(state.promoOffers.length + " Promodescuentos");
+    if (state.storeOffers.length) parts.push(state.storeOffers.length + " tiendas en vivo");
+    livePill.title = liveCount + " ofertas en vivo" + (parts.length ? " · " + parts.join(" · ") : "");
+  }
+
+  function rebuildAll() {
+    ALL.length = 0;
+    ALL.push(...state.storeOffers, ...state.promoOffers, ...BASE_ALL);
+
+    const validIds = new Set(storeEntries().map((entry) => entry.id));
+    state.stores.forEach((id) => {
+      if (!validIds.has(id)) state.stores.delete(id);
+    });
+
+    updateCounts();
+    renderChips();
+    render();
+    refreshLivePill();
+  }
+
+  function applyLiveItems(items, updatedAt) {
+    const offers = [];
+    const seen = new Set();
+    items.forEach((item) => {
+      const offer = liveOfferFromItem(item, offers.length);
+      if (offer && !seen.has(offer.link)) {
+        seen.add(offer.link);
+        offers.push(offer);
+      }
+    });
+    if (!offers.length) return false;
+
+    state.promoOffers = offers;
+    lastLiveUpdate = updatedAt || Date.now();
+    rebuildAll();
+    return true;
+  }
+
+  async function loadLive(force) {
+    if (liveLoading) return;
+    const cached = readLiveCache();
+
+    if (!force && cached && Date.now() - cached.ts < LIVE_TTL) {
+      applyLiveItems(cached.items, cached.ts);
+      return;
+    }
+
+    if (cached) applyLiveItems(cached.items, cached.ts);
+
+    liveLoading = true;
+    refreshLiveBtn.classList.add("is-loading");
+    refreshLiveBtn.disabled = true;
+    if (!cached) setLiveStatus("loading", "Buscando ofertas en vivo…");
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try {
+        response = await fetch(LIVE_API_URL, { cache: "no-store", signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const payload = await response.json();
+      if (!payload || payload.status !== "ok" || !Array.isArray(payload.items)) {
+        throw new Error("Respuesta no válida");
+      }
+      if (!applyLiveItems(payload.items, Date.now())) throw new Error("Sin ofertas utilizables");
+      writeLiveCache(payload.items);
+    } catch (error) {
+      console.warn("No se pudieron cargar las ofertas en vivo:", error);
+      if (cached) {
+        const liveCount = ALL.filter((offer) => offer.live).length;
+        setLiveStatus("live", ALL.length + " ofertas · " + liveCount + " en vivo");
+        livePill.title = "Sin conexión con Promodescuentos · última actualización " + timeAgo(cached.ts);
+      } else {
+        setLiveStatus("offline", ALL.length + " ofertas · catálogo local");
+        livePill.title = "Sin conexión. Mostrando el catálogo local.";
+      }
+    } finally {
+      liveLoading = false;
+      refreshLiveBtn.classList.remove("is-loading");
+      refreshLiveBtn.disabled = false;
+    }
+  }
+
+  refreshLiveBtn.addEventListener("click", () => {
+    if (Date.now() - lastManualRefresh < 30000) {
+      toast("Espera unos segundos antes de volver a actualizar");
+      return;
+    }
+    lastManualRefresh = Date.now();
+    loadLive(true);
+  });
+
+  /* ---------- Búsqueda en vivo: Amazon + Liverpool ---------- */
+  let storeApiReady = false;
+  let storeSearchTimer = null;
+  let storeAbort = null;
+  const STORE_SOURCE_LABELS = {
+    amazon: "Amazon",
+    liverpool: "Liverpool",
+    samsclub: "Sam's Club",
+    costco: "Costco",
+    sears: "Sears",
+    sanborns: "Sanborns",
+    suburbia: "Suburbia",
+    chedraui: "Chedraui",
+    lacomer: "La Comer",
+    homedepot: "Home Depot",
+    soriana: "Soriana",
+    dominos: "Domino's Pizza",
+    starbucks: "Starbucks",
+    mercadolibre: "Mercado Libre"
+  };
+  const sourceListText = (keys) => {
+    const names = keys.map((key) => STORE_SOURCE_LABELS[key]).filter(Boolean);
+    if (names.length <= 1) return names[0] || "";
+    return names.slice(0, -1).join(", ") + " y " + names[names.length - 1];
+  };
+
+  function setStoreLiveStatus(mode, message) {
+    if (!message) {
+      storeLive.hidden = true;
+      storeLiveText.textContent = "";
+      storeLive.title = "";
+      storeLiveRetry.hidden = true;
+      storeLive.classList.remove("is-loading", "is-error");
+      return;
+    }
+    storeLive.hidden = false;
+    storeLiveText.textContent = message;
+    storeLive.classList.toggle("is-loading", mode === "loading");
+    storeLive.classList.toggle("is-error", mode === "error");
+    storeLiveRetry.hidden = mode !== "error";
+  }
+
+  function normalizeStoreOffers(items, query) {
+    const fetchedAt = Date.now();
+    return (items || [])
+      .filter((offer) => offer && Number(offer.price) > 0 && /^https:\/\//.test(String(offer.link || "")))
+      .map((offer, index) => {
+        const price = Number(offer.price);
+        const old = Number(offer.old) > price ? Number(offer.old) : 0;
+        return {
+          ...offer,
+          id: "store-" + (offer.id || index + "-" + hashString(String(offer.link || offer.product || index))),
+          price: price,
+          old: old,
+          discount: old ? Math.max(1, Math.round((1 - price / old) * 100)) : 0,
+          live: true,
+          kind: "store",
+          type: offer.type === "restaurante" ? "restaurante" : "tienda",
+          publishedAt: fetchedAt,
+          category: offer.category || "En vivo",
+          haystack: norm([offer.product, offer.category, offer.store, offer.source, query].join(" "))
+        };
+      });
+  }
+
+  async function searchStores(query) {
+    const q = String(query || "").trim();
+    if (!storeApiReady || q.length < 3) return;
+
+    if (storeAbort) storeAbort.abort();
+    const controller = new AbortController();
+    storeAbort = controller;
+    setStoreLiveStatus("loading", "Consultando tiendas en vivo…");
+
+    try {
+      const response = await fetch("/api/search?q=" + encodeURIComponent(q), {
+        cache: "no-store",
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const payload = await response.json();
+      if (state.q.trim() !== q) return;
+
+      const offers = normalizeStoreOffers(payload.results, q);
+      state.storeOffers = offers;
+      state.storeQuery = q;
+      rebuildAll();
+
+      const sources = payload.sources || {};
+      const sourceKeys = Object.keys(sources).filter((key) => STORE_SOURCE_LABELS[key]);
+      const details = sourceKeys.map((key) => {
+        const source = sources[key];
+        if (!source) return null;
+        return source.ok
+          ? STORE_SOURCE_LABELS[key] + " " + source.count
+          : STORE_SOURCE_LABELS[key] + " sin respuesta";
+      }).filter(Boolean);
+      const allSourcesOk = sourceKeys.every((key) => sources[key] && sources[key].ok);
+
+      if (offers.length) {
+        const okCount = sourceKeys.filter((key) => sources[key] && sources[key].ok && sources[key].count > 0).length;
+        setStoreLiveStatus(
+          "ok",
+          offers.length + " precios en vivo · " + okCount + " de " + sourceKeys.length + " comercios"
+        );
+        storeLive.title = details.join(" · ");
+      } else if (allSourcesOk) {
+        setStoreLiveStatus("ok", "Sin coincidencias en " + sourceListText(sourceKeys));
+      } else {
+        setStoreLiveStatus("error", "No se pudieron consultar " + sourceListText(sourceKeys));
+      }
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      if (state.q.trim() !== q) return;
+      state.storeOffers = [];
+      state.storeQuery = q;
+      rebuildAll();
+      setStoreLiveStatus("error", "No se pudo conectar con el servidor local");
+    } finally {
+      if (storeAbort === controller) storeAbort = null;
+    }
+  }
+
+  function scheduleStoreSearch(immediate) {
+    clearTimeout(storeSearchTimer);
+    if (!storeApiReady) return;
+    const q = state.q.trim();
+    if (q.length < 3) {
+      if (storeAbort) {
+        storeAbort.abort();
+        storeAbort = null;
+      }
+      setStoreLiveStatus("idle", "");
+      return;
+    }
+    if (state.storeQuery === q && state.storeOffers.length) return;
+    storeSearchTimer = setTimeout(() => searchStores(q), immediate ? 10 : 700);
+  }
+
+  function clearStoreResults() {
+    if (storeAbort) {
+      storeAbort.abort();
+      storeAbort = null;
+    }
+    clearTimeout(storeSearchTimer);
+    const hadResults = state.storeOffers.length > 0 || state.storeQuery;
+    state.storeOffers = [];
+    state.storeQuery = "";
+    setStoreLiveStatus("idle", "");
+    if (hadResults) rebuildAll();
+  }
+
+  async function initStoreApi() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    try {
+      const response = await fetch("/api/health", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!data.ok) return;
+      storeApiReady = true;
+      if (state.q.trim().length >= 3) scheduleStoreSearch(false);
+    } catch (error) {
+      // También funciona abierto como archivo o en un servidor estático.
+    }
+  }
+
+  storeLiveRetry.addEventListener("click", () => {
+    if (storeApiReady && state.q.trim().length >= 3) {
+      searchStores(state.q.trim());
+    } else {
+      initStoreApi();
+    }
+  });
+
+  /* ---------- Chips de comercios ---------- */
+  function chipHTML(store) {
+    const hasLive = store.liveCount > 0;
+    const countClass = hasLive ? "is-live" : "is-demo";
+    const detail = store.name + ", " + store.count + " ofertas" +
+      (hasLive ? ", " + store.liveCount + " con datos reales" : ", solo datos de ejemplo");
+    return '<button class="chip" type="button" data-store="' + store.id + '" aria-pressed="false" aria-label="' + esc(detail) + '" title="' + esc(detail) + '" style="--dot:' + store.color + '">' +
+      '<span class="dot" aria-hidden="true"></span>' +
+      '<span class="name">' + esc(store.name) + '</span>' +
+      '<span class="c ' + countClass + '">' + store.count + '</span>' +
+      '</button>';
+  }
+
+  function renderChips() {
+    const entries = storeEntries();
+    const byName = (a, b) => a.name.localeCompare(b.name, "es");
+    chipsTienda.innerHTML = entries.filter((e) => e.type === "tienda").sort(byName).map(chipHTML).join("");
+    chipsRest.innerHTML = entries.filter((e) => e.type === "restaurante").sort(byName).map(chipHTML).join("");
+    groupTienda.hidden = state.type === "restaurante";
+    groupRest.hidden = state.type === "tienda";
+    syncChipStates();
+  }
+
+  function syncChipStates() {
+    $$(".chip").forEach((chip) => {
+      chip.setAttribute("aria-pressed", state.stores.has(chip.dataset.store) ? "true" : "false");
+    });
+  }
+
+  function bindChipContainer(container) {
+    container.addEventListener("click", (event) => {
+      const chip = event.target.closest(".chip");
+      if (!chip) return;
+      const id = chip.dataset.store;
+      if (state.stores.has(id)) state.stores.delete(id);
+      else state.stores.add(id);
+      syncChipStates();
+      render();
+    });
+  }
+  bindChipContainer(chipsTienda);
+  bindChipContainer(chipsRest);
+
+  updateCounts();
+
+  /* ---------- Filtro + orden ---------- */
+  function getResults() {
+    const tokens = norm(state.q).split(/\s+/).filter(Boolean);
+    let list = ALL.filter((offer) => {
+      if (state.type !== "todo" && offer.type !== state.type) return false;
+      if (state.stores.size > 0 && !state.stores.has(offer.storeId)) return false;
+      if (tokens.length > 0) {
+        for (const token of tokens) {
+          if (!offer.haystack.includes(token)) return false;
+        }
+      }
+      return true;
+    });
+
+    switch (state.sort) {
+      case "descuento":
+        list = list.slice().sort((a, b) => b.discount - a.discount || a.price - b.price);
+        break;
+      case "precio-asc":
+        list = list.slice().sort((a, b) => a.price - b.price);
+        break;
+      case "precio-desc":
+        list = list.slice().sort((a, b) => b.price - a.price);
+        break;
+      case "ahorro":
+        list = list.slice().sort((a, b) => (b.old - b.price) - (a.old - a.price));
+        break;
+      default:
+        break;
+    }
+    return list;
+  }
+
+  /* ---------- Tarjetas ---------- */
+  function cardHTML(offer) {
+    const isLive = Boolean(offer.live);
+    const sourceLabel = offer.source || "Promodescuentos";
+    const promo = offer.promo
+      ? '<span class="tag-promo">' + esc(offer.promo) + '</span>'
+      : "";
+    const categoryTag = offer.kind === "store"
+      ? ""
+      : '<span class="tag-cat">' + esc(offer.category) + '</span>';
+    const sourceTag = isLive
+      ? '<span class="tag-source">' + esc(sourceLabel) + '</span>'
+      : "";
+    const badge = isLive && !offer.discount
+      ? '<span class="badge-live">En vivo</span>'
+      : '<span class="badge-discount" aria-label="Descuento del ' + offer.discount + '%">-' + offer.discount + '%</span>';
+
+    const code = offer.code
+      ? '<button class="code" type="button" data-copy="' + esc(offer.code) + '" title="Copiar cupón ' + esc(offer.code) + '">Código <strong>' + esc(offer.code) + '</strong></button>'
+      : (isLive
+          ? '<span class="code code-empty">' + esc(sourceLabel) + '</span>'
+          : '<span class="code code-empty">Descuento directo</span>');
+
+    const hasOld = offer.old > offer.price;
+    const oldPrice = hasOld ? '<span class="old">' + money(offer.old) + '</span>' : "";
+    const saving = hasOld
+      ? '<span class="save">Ahorras ' + money(offer.old - offer.price) + '</span>'
+      : "";
+    const validity = offer.kind === "store"
+      ? "Precio en vivo"
+      : (isLive ? "Publicada " + timeAgo(offer.publishedAt) : "Hasta " + esc(offer.until));
+    const cta = isLive
+      ? '<a class="btn-card" href="' + esc(offer.link) + '" target="_blank" rel="noopener noreferrer">Ver oferta' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"></path></svg>' +
+        '</a>'
+      : '<button class="btn-card" type="button" data-open="' + offer.id + '">Ver oferta' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>' +
+        '</button>';
+
+    return '<article class="card">' +
+      '<div class="card-top">' +
+        '<div class="store">' +
+          '<span class="store-icon" style="background:' + offer.color + '1f" aria-hidden="true">' + offer.icon + '</span>' +
+          '<div style="min-width:0">' +
+            '<p class="store-name" title="' + esc(offer.store) + '">' + esc(offer.store) + '</p>' +
+            '<p class="store-type">' + TYPE_LABEL[offer.type] + '</p>' +
+          '</div>' +
+        '</div>' +
+        badge +
+      '</div>' +
+      '<h3 title="' + esc(offer.product) + '">' + esc(offer.product) + '</h3>' +
+      '<div class="tags">' + categoryTag + promo + sourceTag + '</div>' +
+      '<div class="price-line">' + oldPrice + '<span class="now">' + money(offer.price) + '</span></div>' +
+      '<div class="save-line">' + saving + '<span class="valid">' + validity + '</span></div>' +
+      '<div class="card-foot">' + code + cta +
+      '</div>' +
+    '</article>';
+  }
+
+  function emptyHTML() {
+    const query = state.q ? ' para <strong>“' + esc(state.q) + '”</strong>' : "";
+    return '<div class="empty">' +
+      '<div class="emoji" aria-hidden="true">🔍</div>' +
+      '<h3>Sin ofertas encontradas</h3>' +
+      '<p>No encontramos resultados' + query + ' con los filtros seleccionados. Prueba con otra palabra o quita algún filtro.</p>' +
+      '<button type="button" data-clear-all>Limpiar filtros</button>' +
+    '</div>';
+  }
+
+  /* ---------- Resumen ---------- */
+  function updateSummary(count, liveCount) {
+    const entryMap = new Map(storeEntries().map((entry) => [entry.id, entry]));
+    const names = Array.from(state.stores)
+      .map((id) => entryMap.get(id))
+      .filter(Boolean)
+      .map((entry) => entry.name);
+    const parts = [];
+
+    if (state.q) parts.push('para “' + state.q + '”');
+
+    if (names.length === 1) parts.push("en " + names[0]);
+    else if (names.length === 2) parts.push("en " + names[0] + " y " + names[1]);
+    else if (names.length === 3) parts.push("en " + names[0] + ", " + names[1] + " y " + names[2]);
+    else if (names.length > 3) parts.push("en " + names.slice(0, 3).join(", ") + " y " + (names.length - 3) + " más");
+    else if (state.type === "tienda") parts.push("en todas las tiendas");
+    else if (state.type === "restaurante") parts.push("en todos los restaurantes");
+    else parts.push("en todas las tiendas y restaurantes");
+
+    resultsTitle.textContent = count + " " + (count === 1 ? "oferta" : "ofertas");
+    resultsSub.textContent = parts.join(" ") + (liveCount > 0 ? " · " + liveCount + " en vivo" : "");
+
+    clearFiltersBtn.hidden = !(state.q || state.stores.size > 0);
+    clearSearchBtn.hidden = state.q.length === 0;
+  }
+
+  /* ---------- Render principal ---------- */
+  function render() {
+    const list = getResults();
+    grid.innerHTML = list.length ? list.map(cardHTML).join("") : emptyHTML();
+    updateSummary(list.length, list.filter((offer) => offer.live).length);
+  }
+
+  /* ---------- Búsqueda ---------- */
+  function setSearchQuery(value, immediate) {
+    const next = String(value || "").replace(/"/g, "");
+    state.q = next;
+    searchInput.value = next ? '"' + next + '"' : "";
+    if (next) {
+      const caret = Math.max(1, searchInput.value.length - 1);
+      searchInput.setSelectionRange(caret, caret);
+    }
+
+    if (state.storeQuery && next.trim() !== state.storeQuery) {
+      if (storeAbort) {
+        storeAbort.abort();
+        storeAbort = null;
+      }
+      clearTimeout(storeSearchTimer);
+      state.storeOffers = [];
+      state.storeQuery = "";
+      setStoreLiveStatus("idle", "");
+      rebuildAll();
+    } else {
+      render();
+    }
+
+    scheduleStoreSearch(Boolean(immediate));
+  }
+
+  searchInput.addEventListener("input", () => {
+    const raw = searchInput.value;
+    const inner = raw.replace(/"/g, "");
+    setSearchQuery(inner, false);
+  });
+
+  clearSearchBtn.addEventListener("click", () => {
+    setSearchQuery("", false);
+    searchInput.focus();
+  });
+
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && searchInput.value) {
+      setSearchQuery("", false);
+      return;
+    }
+    if (event.key === "Enter" && state.q.trim().length >= 3) {
+      event.preventDefault();
+      scheduleStoreSearch(true);
+    }
+  });
+
+  $$(".suggest").forEach((button) => {
+    button.addEventListener("click", () => {
+      searchInput.focus();
+      setSearchQuery(button.dataset.q, true);
+    });
+  });
+
+  /* ---------- Tabs tienda / restaurante ---------- */
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      state.type = tab.dataset.type;
+      tabs.forEach((t) => {
+        const active = t === tab;
+        t.classList.toggle("is-active", active);
+        t.setAttribute("aria-selected", String(active));
+      });
+      // Quitar selecciones que no pertenecen al tipo visible
+      if (state.type !== "todo") {
+        const entries = new Map(storeEntries().map((entry) => [entry.id, entry]));
+        state.stores.forEach((id) => {
+          const store = entries.get(id);
+          if (!store || store.type !== state.type) state.stores.delete(id);
+        });
+      }
+      renderChips();
+      render();
+    });
+  });
+
+  /* ---------- Orden ---------- */
+  sortSelect.addEventListener("change", () => {
+    state.sort = sortSelect.value;
+    render();
+  });
+
+  /* ---------- Limpiar filtros ---------- */
+  function clearAll() {
+    state.q = "";
+    state.type = "todo";
+    state.stores.clear();
+    state.sort = "relevancia";
+    state.storeOffers = [];
+    state.storeQuery = "";
+    searchInput.value = "";
+    sortSelect.value = "relevancia";
+    if (storeAbort) {
+      storeAbort.abort();
+      storeAbort = null;
+    }
+    clearTimeout(storeSearchTimer);
+    setStoreLiveStatus("idle", "");
+    tabs.forEach((t) => {
+      const active = t.dataset.type === "todo";
+      t.classList.toggle("is-active", active);
+      t.setAttribute("aria-selected", String(active));
+    });
+    rebuildAll();
+  }
+
+  clearFiltersBtn.addEventListener("click", clearAll);
+
+  grid.addEventListener("click", (event) => {
+    if (event.target.closest("[data-clear-all]")) {
+      clearAll();
+      return;
+    }
+    const openBtn = event.target.closest("[data-open]");
+    if (openBtn) {
+      openModal(openBtn.dataset.open);
+      return;
+    }
+    const copyBtn = event.target.closest("[data-copy]");
+    if (copyBtn) copyText(copyBtn.dataset.copy);
+  });
+
+  /* ---------- Portapapeles ---------- */
+  function copyText(text) {
+    const done = () => toast("Cupón " + text + " copiado al portapapeles");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } catch (error) {
+      toast("No se pudo copiar. Cupón: " + text);
+    }
+    document.body.removeChild(textarea);
+  }
+
+  let toastTimer = null;
+  function toast(message) {
+    const el = $("#toast");
+    $("#toastMsg").textContent = message;
+    el.classList.add("is-visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("is-visible"), 2600);
+  }
+
+  /* ---------- Modal ---------- */
+  const modal = $("#modal");
+  let currentOffer = null;
+  let lastFocused = null;
+
+  function openModal(id) {
+    const offer = ALL.find((o) => o.id === id);
+    if (!offer) return;
+    currentOffer = offer;
+    lastFocused = document.activeElement;
+
+    $("#modalIcon").textContent = offer.icon;
+    $("#modalIcon").style.background = offer.color + "1f";
+    $("#modalStore").textContent = offer.store;
+    $("#modalType").textContent = TYPE_LABEL[offer.type];
+    $("#modalTitle").textContent = offer.product;
+    $("#modalDesc").textContent = offer.product + ", con " + offer.discount +
+      "% de descuento en " + offer.store + ". Precio especial válido hasta el " + offer.until + ".";
+    $("#modalOld").textContent = money(offer.old);
+    $("#modalNow").textContent = money(offer.price);
+    $("#modalDiscount").textContent = "-" + offer.discount + "%";
+    $("#modalValid").textContent = "Vigencia: hasta el " + offer.until;
+    $("#modalSave").textContent = "Ahorras " + money(offer.old - offer.price);
+
+    const codeBox = $("#modalCodeBox");
+    const primary = $("#modalPrimary");
+    if (offer.code) {
+      codeBox.hidden = false;
+      $("#modalCode").textContent = offer.code;
+      primary.hidden = false;
+      primary.textContent = "Copiar cupón";
+    } else {
+      codeBox.hidden = true;
+      primary.hidden = false;
+      primary.textContent = "Descuento directo ✓";
+    }
+
+    modal.hidden = false;
+    document.body.classList.add("no-scroll");
+    requestAnimationFrame(() => $(".modal-close").focus());
+  }
+
+  function closeModal() {
+    if (modal.hidden) return;
+    modal.hidden = true;
+    document.body.classList.remove("no-scroll");
+    currentOffer = null;
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
+
+  modal.addEventListener("click", (event) => {
+    if (event.target.closest("[data-close]")) closeModal();
+  });
+
+  $("#modalCopy").addEventListener("click", () => {
+    if (currentOffer && currentOffer.code) copyText(currentOffer.code);
+  });
+
+  $("#modalPrimary").addEventListener("click", () => {
+    if (currentOffer && currentOffer.code) copyText(currentOffer.code);
+    else closeModal();
+  });
+
+  /* ---------- Atajos de teclado ---------- */
+  document.addEventListener("keydown", (event) => {
+    const tag = (event.target.tagName || "").toLowerCase();
+    const typing = tag === "input" || tag === "textarea" || tag === "select" || event.target.isContentEditable;
+
+    if (event.key === "Escape" && !modal.hidden) {
+      closeModal();
+      return;
+    }
+    if (event.key === "/" && !typing) {
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+
+  async function initMeliConnect() {
+    const link = $("#meliConnect");
+    if (!link) return;
+    if (!/^https?:$/.test(location.protocol)) {
+      link.hidden = true;
+      return;
+    }
+    try {
+      const response = await fetch("/auth/mercadolibre/status", { cache: "no-store" });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const data = await response.json();
+      if (!data.configured) {
+        link.hidden = true;
+        return;
+      }
+      if (data.connected) {
+        link.textContent = "Mercado Libre conectado";
+        link.removeAttribute("href");
+        link.classList.add("is-connected");
+      }
+    } catch (error) {
+      link.hidden = true;
+    }
+  }
+
+  /* ---------- Arranque ---------- */
+  renderChips();
+  updateCounts();
+  render();
+  topCount.textContent = ALL.length + " ofertas activas";
+  loadLive(false);
+  initStoreApi();
+  initMeliConnect();
+
+  // Exponer datos para depuración / integración
+  window.Ofertazo = {
+    stores: STORES,
+    offers: ALL,
+    state: state,
+    reload: function () { return loadLive(true); },
+    searchStores: function (query) { return searchStores(query); }
+  };
+})();
+</script>
+</body>
+</html>

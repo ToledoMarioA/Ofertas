@@ -1,0 +1,13 @@
+{
+  "name": "ofertazo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buscador de ofertas de tiendas y restaurantes con fuentes en vivo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
